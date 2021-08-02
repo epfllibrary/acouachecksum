@@ -17,7 +17,7 @@ A full documentation can be found [here]() Note : Insert the KB link here when i
 * to install the python package : ```pip install -r requirements.txt```
 * To run the software ```python main.py```
 
-## Files
+## Files
 
 * ```main.py``` : main python script
 * ```README.md``` : this files
