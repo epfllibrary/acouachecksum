@@ -20,7 +20,7 @@ Linux user can use the source code to launch the program.
 * to install the python package : ```pip install -r requirements.txt```
 * To run the software ```python main.py```
 
-## Files
+## Files
 
 * ```main.py``` : main python script
 * ```README.md``` : this files
