@@ -9,6 +9,9 @@ You can use this tool to generate the ```ACOUA_md5.md5```file needed for submitt
 
 A full documentation can be found [here]() Note : Insert the KB link here when it's ready
 
+The software for Windows and macos can be found here : [Releases](https://github.com/epfllibrary/acouachecksum/releases)
+
+Linux user can use the source code to launch the program.
 
 ## Source code
 
