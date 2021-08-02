@@ -15,6 +15,15 @@ A full documentation can be found [here]() Note : Insert the KB link here when i
 * To create the environment ```python -m venv venv```
 * To activate the environment ```source ./venv/bin/activate```
 * to install the python package : ```pip install -r requirements.txt```
+* To run the software ```python main.py```
+
+## Files
+
+* ```main.py``` : main python script
+* ```README.md``` : this files
+* ```requirements.txt``` : python packages (pip) needed for this project
+* ```main-macos.spec``` : configuration file for pyinstaller for building macos package
+* ```main-windows.spec``` : configuration file for pyinstaller for building macos package
 
 
 ## Packaging (compilation)
@@ -25,6 +34,8 @@ Note: You need to run pyinstaller on the same system (ie for generating the maco
 * macos :  ```pyinstaller -y -w -F --distpath ./dist/macos main-macos.spec```
 * windows : ```pyinstaller -y -w --name acouacheck -F --distpath ./dist/windows main-windows.spec ```
 
+The corresponding package will be in the ```dist``` folder.
+Note : the ```build``` folder is a temporary folder used by pyinstaller.
 
 # Bash command equivalent
 
