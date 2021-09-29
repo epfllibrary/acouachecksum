@@ -20,7 +20,6 @@ def _path_to_dict(path):
     d = []
     if os.path.exists(path):
         for ls in os.listdir(path):
-
             if not ls.startswith('.') and not ls.startswith('.DS_Store') and not ls.startswith('ACOUA_md5.md5'):
                 ls = Path(os.path.join(path, ls))
                 if os.path.isdir(ls):
