@@ -5,6 +5,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button
 
+version = "0.2"
 
 def md5Checksum(filePath):
     with open(filePath, 'rb') as fh:
@@ -42,7 +43,7 @@ def runchecksum():
 
 
 root = Tk()
-root.wm_title("ACOUA CheckSum")
+root.wm_title("ACOUA CheckSum v" + version)
 root.geometry('400x250+1000+300')
 
 button_label = 'Select a directory and run checksum'
