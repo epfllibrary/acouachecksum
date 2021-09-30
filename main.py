@@ -1,8 +1,9 @@
 import hashlib
 import os
+import glob
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from tkinter import *
+from tkinter import Tk, Button
 
 
 def md5Checksum(filePath):
@@ -16,33 +17,26 @@ def md5Checksum(filePath):
         return m.hexdigest()
 
 
-def _path_to_dict(path):
-    d = []
-    if os.path.exists(path):
-        for ls in os.listdir(path):
-            if not ls.startswith('.') and not ls.startswith('.DS_Store') and not ls.startswith('ACOUA_md5.md5'):
-                ls = Path(os.path.join(path, ls))
-                if os.path.isdir(ls):
-                    d.append(_path_to_dict(ls))
-                else:
-                    d.append(os.path.relpath(ls))
-        return d
-
-
-def flatten(l): return flatten(l[0]) + (flatten(l[1:]) if len(l) > 1 else []) if type(l) is list else [l]
-
-
 def runchecksum():
-    choosedir = filedialog.askdirectory(initialdir=Path.home(), title="Select your ingestion folder")
+    d_title = "Select your ingestion folder"
+    choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
     if choosedir == '' or not os.path.exists(choosedir):
         return
     os.chdir(choosedir)
 
-    files = flatten(_path_to_dict(choosedir))
+    all_files = glob.glob(choosedir + '**/**', recursive=True)
+    files = []
+    for ls in all_files:
+        if not ls.startswith(os.path.join(choosedir, '.')) \
+                and not ls.startswith(os.path.join(choosedir, '.DS_Store')) \
+                and not ls.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
+                and not os.path.isdir(os.path.join(choosedir, ls)):
+            files.append(ls)
+
     f = open("ACOUA_md5.md5", "w")
     for element in files:
         md5 = md5Checksum(element)
-        f.write(md5 + " " + "./" + element+"\n")
+        f.write(f'{md5} {element.replace(choosedir,".")}\n')
     f.close()
     messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
 
@@ -51,5 +45,6 @@ root = Tk()
 root.wm_title("ACOUA CheckSum")
 root.geometry('400x250+1000+300')
 
-Button(root, text='Select a directory and run checksum', command=runchecksum).pack()
+button_label = 'Select a directory and run checksum'
+Button(root, text=button_label, command=runchecksum).pack()
 root.mainloop()
