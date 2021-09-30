@@ -3,8 +3,8 @@
 block_cipher = None
 
 
-a = Analysis(['main.py'],
-             pathex=[],
+a = Analysis(['main-macos.spec'],
+             pathex=['/Users/alain/devel/acouachecksum'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -23,21 +23,15 @@ exe = EXE(pyz,
           a.zipfiles,
           a.datas,
           [],
-          name='acouachecksum',
+          name='main-macos',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
-          upx=False,
+          upx=True,
           upx_exclude=[],
           runtime_tmpdir=None,
           console=False )
 app = BUNDLE(exe,
              name='acouachecksum.app',
              icon=None,
-             bundle_identifier=None,
-             info_plist={
-                'NSPrincipalClass': 'NSApplication',
-                'NSAppleScriptEnabled': False,
-                'NSHighResolutionCapable': 'True'
-            }
-        ,)
+             bundle_identifier=None)
