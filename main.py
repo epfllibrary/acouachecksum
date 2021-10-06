@@ -5,7 +5,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button
 
-version = "0.2"
+version = "0.3"
 
 def md5Checksum(filePath):
     with open(filePath, 'rb') as fh:
@@ -24,6 +24,9 @@ def runchecksum():
     if choosedir == '' or not os.path.exists(choosedir):
         return
     os.chdir(choosedir)
+
+    # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
+    choosedir = os.getcwd()
 
     all_files = glob.glob(choosedir + '**/**', recursive=True)
     files = []
