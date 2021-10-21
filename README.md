@@ -25,8 +25,8 @@ Linux user can use the source code to launch the program.
 * ```main.py``` : main python script
 * ```README.md``` : this files
 * ```requirements.txt``` : python packages (pip) needed for this project
-* ```main-macos.spec``` : configuration file for pyinstaller for building macos package
-* ```main-windows.spec``` : configuration file for pyinstaller for building macos package
+* ```main-macos.spec``` : configuration file for pyinstaller for building MacOS package
+* ```main-windows.spec``` : configuration file for pyinstaller for building Windows package
 
 
 ## Packaging (compilation)
