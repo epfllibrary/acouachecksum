@@ -1,6 +1,7 @@
 import hashlib
 import os
 import glob
+import pathlib
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button
@@ -28,14 +29,18 @@ def runchecksum():
     # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
     choosedir = os.getcwd()
 
-    all_files = glob.glob(choosedir + '**/**', recursive=True)
+    all_files = pathlib.Path(choosedir).rglob('**/*')
     files = []
     for ls in all_files:
-        if not ls.startswith(os.path.join(choosedir, '.')) \
-                and not ls.startswith(os.path.join(choosedir, '.DS_Store')) \
-                and not ls.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
-                and not os.path.isdir(os.path.join(choosedir, ls)):
-            files.append(ls)
+        filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
+        if not ls.name.startswith(os.path.join(choosedir, '.DS_Store')) \
+                and not ls.name.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
+                and not os.path.isdir(filename):
+            #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
+            if filename.startswith('/'):
+                files.append(filename[1:])
+            else:
+                files.append(filename)
 
     f = open("ACOUA_md5.md5", "w")
     for element in files:
