@@ -6,7 +6,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button
 
-version = "0.3"
+version = "0.4"
 
 def md5Checksum(filePath):
     with open(filePath, 'rb') as fh:
