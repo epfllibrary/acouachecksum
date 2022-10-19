@@ -34,7 +34,7 @@ Linux user can use the source code to launch the program.
 You can generate a package of the application using pyinstaller.
 Note: You need to run pyinstaller on the same system (ie for generating the macos package you need to run this command on macos for example)
 
-* macos :  ```pyinstaller -y -w -F --distpath ./dist/macos main-macos.spec```
+* macos :  ```pyinstaller -y --distpath ./dist/macos main-macos.spec```
 * windows : ```pyinstaller -y -w --name acouacheck -F --distpath ./dist/windows main-windows.spec ```
 
 The corresponding package will be in the ```dist``` folder.
