@@ -5,6 +5,7 @@ import pathlib
 from pathlib import Path
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button
+from unicodedata import normalize
 
 version = "0.5"
 
@@ -47,7 +48,8 @@ def runchecksum():
     for element in files:
         md5 = md5Checksum(element)
         # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-        f.write(f'{md5} {element.replace(choosedir,".")}\n'.encode("UTF-8"))
+        # also: NFC normalization for proper (composed) representation of accented characters
+        f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".")}\n').encode("UTF-8"))
 
     f.close()
     messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
