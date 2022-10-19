@@ -35,13 +35,13 @@ You can generate a package of the application using pyinstaller.
 Note: You need to run pyinstaller on the same system (ie for generating the macos package you need to run this command on macos for example)
 
 * macos :  ```pyinstaller -y --distpath ./dist/macos main-macos.spec```
-* windows : ```pyinstaller -y -w --name acouacheck -F --distpath ./dist/windows main-windows.spec ```
+* windows : ```pyinstaller -y --distpath ./dist/windows main-windows.spec ```
 
 The corresponding package will be in the ```dist``` folder.
 Note : the ```build``` folder is a temporary folder used by pyinstaller.
 
 # Bash command equivalent
 
-You can also generate the ```ACOUA_md5.md5``` in console (bash) using this command :
+You can also generate the ```ACOUA_md5.md5``` in console (bash) using this command, but character encoding problems are possible (the output file must be UTF-8) :
 
 ```find . -type f -not -name ".DS_Store" -not -name "ACOUA_md5.md5" -exec md5 -r '{}' \; > ./ACOUA_md5.md5```
