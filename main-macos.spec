@@ -3,7 +3,7 @@
 block_cipher = None
 
 
-a = Analysis(['main-macos.spec'],
+a = Analysis(['main.py'],
              pathex=['/Users/alain/devel/acouachecksum'],
              binaries=[],
              datas=[],
