@@ -33,8 +33,10 @@ def runchecksum():
     files = []
     for ls in all_files:
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
-        if not ls.name.startswith(os.path.join(choosedir, '.DS_Store')) \
-                and not ls.name.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
+        if not filename.startswith(os.path.join(choosedir, '.DS_Store')) \
+                and not filename.startswith(os.path.join('.', '.DS_Store')) \
+                and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
+                and not filename.startswith(os.path.join('.', 'ACOUA_md5.md5')) \
                 and not os.path.isdir(filename):
             #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
             if filename.startswith('/'):
