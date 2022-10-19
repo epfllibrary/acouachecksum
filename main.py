@@ -42,10 +42,12 @@ def runchecksum():
             else:
                 files.append(filename)
 
-    f = open("ACOUA_md5.md5", "w")
+    f = open("ACOUA_md5.md5", "wb")
     for element in files:
         md5 = md5Checksum(element)
-        f.write(f'{md5} {element.replace(choosedir,".")}\n')
+        # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
+        f.write(f'{md5} {element.replace(choosedir,".")}\n'.encode("UTF-8"))
+
     f.close()
     messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
 
