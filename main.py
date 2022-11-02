@@ -6,7 +6,7 @@ from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
 from tkinter import filedialog, messagebox
-from tkinter import Tk, Button, Label
+from tkinter import Tk, Button, Label, font
 
 from functools import partial
 from unicodedata import normalize
@@ -33,7 +33,7 @@ def md5Checksum(filePath):
         return m.hexdigest()
 
 
-def runchecksum(tkroot):
+def runchecksum(tkroot, width_chars):
     # Clear all existing text messages
     for label in tkroot.winfo_children():
         if type(label) is Label:
@@ -58,7 +58,21 @@ def runchecksum(tkroot):
     # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
     choosedir = os.getcwd()
 
-    path_info = Label(tkroot, text=f'Processing: {choosedir}')
+    choosedir_display = ''
+    line_length = 0
+    for fs_level in choosedir.split(os.sep):
+        if len(fs_level) > width_chars:
+            fs_level = fs_level[0:width_chars-6] + '[...]'
+
+        if line_length + len(fs_level) < width_chars:
+            choosedir_display += fs_level + os.sep
+            line_length += len(fs_level) + 1
+        else:
+            choosedir_display += '\n'
+            choosedir_display += fs_level + os.sep
+            line_length = len(fs_level) + 1
+
+    path_info = Label(tkroot, text=f'Processing:\n{choosedir_display}')
     path_info.pack()
     tkroot.update()
 
@@ -98,13 +112,12 @@ def runchecksum(tkroot):
     f_err = open(error_file, "r")
     error_content = f_err.read()
     f_err.close()
-    """
+    
     if error_content == error_file_header:
         os.remove(error_file)
     else:
         error_info = Label(tkroot, text=error_message)
         error_info.pack()
-    """
 
     done_info = Label(tkroot, text=f'Done.')
     done_info.pack()
@@ -112,9 +125,12 @@ def runchecksum(tkroot):
 
 
 root = Tk()
+current_font = font.nametofont("TkDefaultFont")
 root.wm_title("ACOUA CheckSum v" + version)
-root.geometry('400x250+1000+300')
+width = 400
+width_chars = int(1.8*width / current_font.actual()['size'])
+root.geometry(f'{width}x250+1000+300')
 
 button_label = 'Select a directory and run checksum'
-Button(root, text=button_label, command=partial(runchecksum, root)).pack()
+Button(root, text=button_label, command=partial(runchecksum, root, width_chars)).pack()
 root.mainloop()
