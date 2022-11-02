@@ -3,14 +3,24 @@ import os
 import glob
 import pathlib
 from pathlib import Path
+from ctypes.wintypes import MAX_PATH
+
 from tkinter import filedialog, messagebox
 from tkinter import Tk, Button, Label
+
 from functools import partial
 from unicodedata import normalize
 
 version = "0.6"
 
 error_file = "ACOUA_md5_errors.txt"
+
+
+def log_message(message):
+    f_err = open(error_file, "a")
+    f_err.write(message + '\n')
+    f_err.close()
+
 
 def md5Checksum(filePath):
     with open(filePath, 'rb') as fh:
@@ -28,6 +38,7 @@ def runchecksum(tkroot):
     for label in tkroot.winfo_children():
         if type(label) is Label:
             label.destroy()
+    
 
     error_message = f"There were errors or warnings during processing:\ncheck {error_file} for information."
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
@@ -38,6 +49,12 @@ def runchecksum(tkroot):
         return
     os.chdir(choosedir)
 
+    # delete existing logfile unless it doesn't exist
+    try:
+        os.remove(error_file)
+    except OSError:
+        pass
+
     # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
     choosedir = os.getcwd()
 
@@ -45,9 +62,14 @@ def runchecksum(tkroot):
     path_info.pack()
     tkroot.update()
 
+    log_message(error_file_header)
+
     all_files = pathlib.Path(choosedir).rglob('**/*')
     files = []
     for ls in all_files:
+        # print(os.path.join(str(ls.parents[0]), ls.name))
+        if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
+            log_message(f"WARNING: > {MAX_PATH} chars at {os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
         if not filename.endswith(os.sep + '.DS_Store') \
                 and not filename.endswith(os.sep + 'Thumbs.db') \
@@ -61,8 +83,6 @@ def runchecksum(tkroot):
                 files.append(filename)
 
     f = open("ACOUA_md5.md5", "wb")
-    f_err = open(error_file, "w")
-    f_err.write(error_file_header)
     for element in files:
         try:
             md5 = md5Checksum(element)
@@ -71,18 +91,21 @@ def runchecksum(tkroot):
             f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".")}\n').encode("UTF-8"))
         except Exception as e:
             trace = str(e)
-            f_err.write(trace)
+            log_message(trace)
 
-    f_err.close()
+    f.close()
+
     f_err = open(error_file, "r")
     error_content = f_err.read()
+    f_err.close()
+    """
     if error_content == error_file_header:
         os.remove(error_file)
     else:
         error_info = Label(tkroot, text=error_message)
         error_info.pack()
+    """
 
-    f.close()
     done_info = Label(tkroot, text=f'Done.')
     done_info.pack()
     messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
