@@ -4,10 +4,11 @@ import glob
 import pathlib
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from tkinter import Tk, Button
+from tkinter import Tk, Button, Label
+from functools import partial
 from unicodedata import normalize
 
-version = "0.5"
+version = "0.6"
 
 def md5Checksum(filePath):
     with open(filePath, 'rb') as fh:
@@ -20,7 +21,12 @@ def md5Checksum(filePath):
         return m.hexdigest()
 
 
-def runchecksum():
+def runchecksum(tkroot):
+
+    for label in tkroot.winfo_children():
+        if type(label) is Label:
+            label.destroy()
+
     d_title = "Select your ingestion folder"
     choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
     if choosedir == '' or not os.path.exists(choosedir):
@@ -29,6 +35,10 @@ def runchecksum():
 
     # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
     choosedir = os.getcwd()
+
+    path_info = Label(tkroot, text=f'Processing: {choosedir}')
+    path_info.pack()
+    tkroot.update()
 
     all_files = pathlib.Path(choosedir).rglob('**/*')
     files = []
@@ -53,6 +63,8 @@ def runchecksum():
         f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".")}\n').encode("UTF-8"))
 
     f.close()
+    done_info = Label(tkroot, text=f'Done.')
+    done_info.pack()
     messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
 
 
@@ -61,5 +73,5 @@ root.wm_title("ACOUA CheckSum v" + version)
 root.geometry('400x250+1000+300')
 
 button_label = 'Select a directory and run checksum'
-Button(root, text=button_label, command=runchecksum).pack()
+Button(root, text=button_label, command=partial(runchecksum, root)).pack()
 root.mainloop()
