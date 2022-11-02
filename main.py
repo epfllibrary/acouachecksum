@@ -69,7 +69,7 @@ def runchecksum(tkroot):
     for ls in all_files:
         # print(os.path.join(str(ls.parents[0]), ls.name))
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
-            log_message(f"WARNING: > {MAX_PATH} chars at {os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)}")
+            log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
         if not filename.endswith(os.sep + '.DS_Store') \
                 and not filename.endswith(os.sep + 'Thumbs.db') \
