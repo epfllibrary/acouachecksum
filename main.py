@@ -23,10 +23,12 @@ def log_message(message):
 
 
 def md5Checksum(filePath):
+    blocksize = 8192
+    blocksize = 2**20
     with open(filePath, 'rb') as fh:
         m = hashlib.md5()
         while True:
-            data = fh.read(8192)
+            data = fh.read(blocksize)
             if not data:
                 break
             m.update(data)
@@ -80,11 +82,16 @@ def runchecksum(tkroot, width_chars):
 
     all_files = pathlib.Path(choosedir).rglob('**/*')
     files = []
+    progress_update_frequency = 10
+    progress_info = Label(tkroot, text=f'Listing: {len(files)} files')
+    progress_info.pack()
+    tkroot.update()
     for ls in all_files:
         # print(os.path.join(str(ls.parents[0]), ls.name))
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
+        print(filename)
         if not filename.endswith(os.sep + '.DS_Store') \
                 and not filename.endswith(os.sep + 'Thumbs.db') \
                 and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
@@ -96,13 +103,20 @@ def runchecksum(tkroot, width_chars):
             else:
                 files.append(filename)
 
+        if len(files) % progress_update_frequency == 0:
+            print(f'Listing: {len(files)} files')
+            progress_info.config(text=f'Listing: {len(files)} files')
+            tkroot.update()
+
+    print('Done listing')
+    # switch to individual file progress frequency: chekcsum is much slower
+    progress_update_frequency = 1
     progress = 0
-    progress_info = Label(tkroot, text=f'Progress: {progress}/{len(files)}')
-    progress_info.pack()
+    progress_info .config(text=f'Checksum progress: {progress}/{len(files)}')
     tkroot.update()
 
     f = open("ACOUA_md5.md5", "wb")
-    update_frequency = 10
+    
     for element in files:
         progress += 1
         try:
@@ -113,8 +127,10 @@ def runchecksum(tkroot, width_chars):
         except Exception as e:
             trace = str(e)
             log_message(trace)
-        if progress % update_frequency == 0:
+        if progress % progress_update_frequency == 0:
+            print(f'Progress: {progress}/{len(files)}')
             progress_info.config(text=f'Progress: {progress}/{len(files)}')
+            tkroot.update()
 
     f.close()
     progress_info.config(text=f'Progress: {progress}/{len(files)}')
