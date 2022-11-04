@@ -23,7 +23,8 @@ def log_message(message):
 
 
 def md5Checksum(filePath):
-    blocksize = 8192
+    # blocksize = 8192
+    # switch to 1MB blocks to improve performance
     blocksize = 2**20
     with open(filePath, 'rb') as fh:
         m = hashlib.md5()
@@ -78,10 +79,12 @@ def runchecksum(tkroot, width_chars):
     path_info.pack()
     tkroot.update()
 
+    # Create logfile for potential warnings and errors
     log_message(error_file_header)
 
     all_files = pathlib.Path(choosedir).rglob('**/*')
     files = []
+    # Create Tk label for progress information: counting files
     progress_update_frequency = 10
     progress_info = Label(tkroot, text=f'Listing: {len(files)} files')
     progress_info.pack()
@@ -107,7 +110,8 @@ def runchecksum(tkroot, width_chars):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
-    print('Done listing')
+    # print('Done listing')
+    # the progress information label will now display the actual checksum progress
     # switch to individual file progress frequency: chekcsum is much slower
     progress_update_frequency = 1
     progress = 0
