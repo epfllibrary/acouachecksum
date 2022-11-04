@@ -96,8 +96,15 @@ def runchecksum(tkroot, width_chars):
             else:
                 files.append(filename)
 
+    progress = 0
+    progress_info = Label(tkroot, text=f'Progress: {progress}/{len(files)}')
+    progress_info.pack()
+    tkroot.update()
+
     f = open("ACOUA_md5.md5", "wb")
+    update_frequency = 10
     for element in files:
+        progress += 1
         try:
             md5 = md5Checksum(element)
             # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
@@ -106,22 +113,25 @@ def runchecksum(tkroot, width_chars):
         except Exception as e:
             trace = str(e)
             log_message(trace)
+        if progress % update_frequency == 0:
+            progress_info.config(text=f'Progress: {progress}/{len(files)}')
 
     f.close()
+    progress_info.config(text=f'Progress: {progress}/{len(files)}')
+    tkroot.update()
 
     f_err = open(error_file, "r")
     error_content = f_err.read()
     f_err.close()
     
-    if error_content == error_file_header:
+    if error_content.replace('\r', '').replace('\n', '') == error_file_header.replace('\r', '').replace('\n', ''):
         os.remove(error_file)
     else:
         error_info = Label(tkroot, text=error_message)
         error_info.pack()
 
-    done_info = Label(tkroot, text=f'Done.')
+    done_info = Label(tkroot, text=f'Done: ACOUA_md5.md5 has been created')
     done_info.pack()
-    messagebox.showinfo(title="Done", message="ACOUA_md5.md5 created")
 
 
 root = Tk()
