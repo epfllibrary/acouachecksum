@@ -91,7 +91,6 @@ def runchecksum(tkroot, width_chars):
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
-        print(filename)
         if not filename.endswith(os.sep + '.DS_Store') \
                 and not filename.endswith(os.sep + 'Thumbs.db') \
                 and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
@@ -104,7 +103,7 @@ def runchecksum(tkroot, width_chars):
                 files.append(filename)
 
         if len(files) % progress_update_frequency == 0:
-            print(f'Listing: {len(files)} files')
+            #print(f'Listing: {len(files)} files')
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
@@ -128,7 +127,7 @@ def runchecksum(tkroot, width_chars):
             trace = str(e)
             log_message(trace)
         if progress % progress_update_frequency == 0:
-            print(f'Progress: {progress}/{len(files)}')
+            #print(f'Progress: {progress}/{len(files)}')
             progress_info.config(text=f'Progress: {progress}/{len(files)}')
             tkroot.update()
 
