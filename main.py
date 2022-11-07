@@ -11,7 +11,7 @@ from tkinter import Tk, Button, Label, font
 from functools import partial
 from unicodedata import normalize
 
-version = "0.6"
+version = "0.6.1"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -98,6 +98,8 @@ def runchecksum(tkroot, width_chars):
                 and not filename.endswith(os.sep + 'Thumbs.db') \
                 and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
                 and not filename.startswith(os.path.join('.', 'ACOUA_md5.md5')) \
+                and not filename.startswith(os.path.join(choosedir, error_file)) \
+                and not filename.startswith(os.path.join('.', error_file)) \
                 and not os.path.isdir(filename):
             #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
             if filename.startswith('/'):
