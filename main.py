@@ -157,7 +157,7 @@ root = Tk()
 current_font = font.nametofont("TkDefaultFont")
 root.wm_title("ACOUA CheckSum v" + version)
 width = 400
-width_chars = int(1.8*width / current_font.actual()['size'])
+width_chars = int(1.7*width / current_font.actual()['size'])
 root.geometry(f'{width}x250+1000+300')
 
 button_label = 'Select a directory and run checksum'
