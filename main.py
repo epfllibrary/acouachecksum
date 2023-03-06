@@ -126,7 +126,7 @@ def runchecksum(tkroot, width_chars):
         # TODO skip the unecessaruy files here as well
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
-        zipcontent[archivename] = archive.namelist()
+        zipcontent[archivename] = [info.filename for info in archive.infolist() if not info.is_dir()]
         n_archived_files += len(zipcontent[archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
@@ -167,7 +167,7 @@ def runchecksum(tkroot, width_chars):
                 md5 = md5Checksum(archived_file, ziparchive=archive)
                 # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
                 # also: NFC normalization for proper (composed) representation of accented characters
-                f.write(normalize('NFC',f'{md5} {archived_file}\n').encode("UTF-8"))
+                f.write(normalize('NFC',f'{md5} {"./" + archived_file}\n').encode("UTF-8"))
             except Exception as e:
                 trace = str(e)
                 log_message(trace)
