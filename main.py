@@ -2,6 +2,7 @@ import hashlib
 import os
 import glob
 import pathlib
+import zipfile
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
@@ -11,7 +12,7 @@ from tkinter import Tk, Button, Label, font
 from functools import partial
 from unicodedata import normalize
 
-version = "0.6.1"
+version = "0.7.0"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -22,18 +23,22 @@ def log_message(message):
     f_err.close()
 
 
-def md5Checksum(filePath):
+def md5Checksum(filePath, ziparchive=None):
     # blocksize = 8192
     # switch to 1MB blocks to improve performance
     blocksize = 2**20
-    with open(filePath, 'rb') as fh:
-        m = hashlib.md5()
-        while True:
-            data = fh.read(blocksize)
-            if not data:
-                break
-            m.update(data)
-        return m.hexdigest()
+    if ziparchive is None:
+      fh = open(filePath, 'rb')
+    else:
+      fh = ziparchive.open(filePath, 'r')
+    
+    m = hashlib.md5()
+    while True:
+      data = fh.read(blocksize)
+      if not data:
+        break
+      m.update(data)
+    return m.hexdigest()
 
 
 def runchecksum(tkroot, width_chars):
@@ -82,14 +87,16 @@ def runchecksum(tkroot, width_chars):
     # Create logfile for potential warnings and errors
     log_message(error_file_header)
 
-    all_files = pathlib.Path(choosedir).rglob('**/*')
+    nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
+    ## TODO check which zip files are actually unpacked by Libsafe
+    zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
     files = []
     # Create Tk label for progress information: counting files
     progress_update_frequency = 10
     progress_info = Label(tkroot, text=f'Listing: {len(files)} files')
     progress_info.pack()
     tkroot.update()
-    for ls in all_files:
+    for ls in nonzipfiles:
         # print(os.path.join(str(ls.parents[0]), ls.name))
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
@@ -112,12 +119,24 @@ def runchecksum(tkroot, width_chars):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
+    zipcontent = {}
+    n_archived_files = 0
+    for ls in zipfiles:
+        archivename = os.path.join(str(ls.parents[0]), ls.name)
+        archive = zipfile.ZipFile(archivename, mode="r")
+        zipcontent[archivename] = archive.namelist()
+        n_archived_files += len(zipcontent[archivename])
+        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
+        tkroot.update()
+
+    total_files = len(files) + n_archived_files
+
     # print('Done listing')
     # the progress information label will now display the actual checksum progress
     # switch to individual file progress frequency: chekcsum is much slower
     progress_update_frequency = 1
     progress = 0
-    progress_info .config(text=f'Checksum progress: {progress}/{len(files)}')
+    progress_info .config(text=f'Checksum progress: {progress}/{total_files}')
     tkroot.update()
 
     f = open("ACOUA_md5.md5", "wb")
@@ -134,11 +153,28 @@ def runchecksum(tkroot, width_chars):
             log_message(trace)
         if progress % progress_update_frequency == 0:
             #print(f'Progress: {progress}/{len(files)}')
-            progress_info.config(text=f'Progress: {progress}/{len(files)}')
+            progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
+    
+    for myzipfile in zipcontent:
+        archive = zipfile.ZipFile(myzipfile, mode="r")
+        for archived_file in zipcontent[myzipfile]:
+            progress += 1
+            try:
+                md5 = md5Checksum(archived_file, ziparchive=archive)
+                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
+                # also: NFC normalization for proper (composed) representation of accented characters
+                f.write(normalize('NFC',f'{md5} {archived_file}\n').encode("UTF-8"))
+            except Exception as e:
+                trace = str(e)
+                log_message(trace)
+            if progress % progress_update_frequency == 0:
+                progress_info.config(text=f'Progress: {progress}/{total_files}')
+                tkroot.update()
+
 
     f.close()
-    progress_info.config(text=f'Progress: {progress}/{len(files)}')
+    progress_info.config(text=f'Progress: {progress}/{total_files}')
     tkroot.update()
 
     f_err = open(error_file, "r")
