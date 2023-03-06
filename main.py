@@ -123,6 +123,7 @@ def runchecksum(tkroot, width_chars):
     zipcontent = {}
     n_archived_files = 0
     for ls in zipfiles:
+        # TODO skip the unecessaruy files here as well
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
         zipcontent[archivename] = archive.namelist()
