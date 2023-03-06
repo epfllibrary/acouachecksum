@@ -161,13 +161,15 @@ def runchecksum(tkroot, width_chars):
     # TODO if necessary, handle full paths for files in Zips in subfolders
     for myzipfile in zipcontent:
         archive = zipfile.ZipFile(myzipfile, mode="r")
+        archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
+        print(archive_path)
         for archived_file in zipcontent[myzipfile]:
             progress += 1
             try:
                 md5 = md5Checksum(archived_file, ziparchive=archive)
                 # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
                 # also: NFC normalization for proper (composed) representation of accented characters
-                f.write(normalize('NFC',f'{md5} {"./" + archived_file}\n').encode("UTF-8"))
+                f.write(normalize('NFC',f'{md5} {archive_path + os.path.sep + archived_file}\n').encode("UTF-8"))
             except Exception as e:
                 trace = str(e)
                 log_message(trace)
