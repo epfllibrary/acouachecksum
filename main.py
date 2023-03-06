@@ -156,6 +156,7 @@ def runchecksum(tkroot, width_chars):
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
     
+    # TODO if necessary, handle full paths for files in Zips in subfolders
     for myzipfile in zipcontent:
         archive = zipfile.ZipFile(myzipfile, mode="r")
         for archived_file in zipcontent[myzipfile]:
