@@ -89,6 +89,7 @@ def runchecksum(tkroot, width_chars):
 
     nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
     ## TODO check which zip files are actually unpacked by Libsafe
+    # TODO choice to calculate checksums inside Zip files or not?
     zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
     files = []
     # Create Tk label for progress information: counting files
