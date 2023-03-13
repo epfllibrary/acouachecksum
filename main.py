@@ -124,6 +124,7 @@ def runchecksum(tkroot, width_chars):
     n_archived_files = 0
     for ls in zipfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
+        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
         zipcontent[archivename] = [info.filename for info in archive.infolist() if not info.is_dir()]
