@@ -88,7 +88,7 @@ def runchecksum(tkroot, width_chars):
     log_message(error_file_header)
 
     nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
-    ## TODO check which zip files are actually unpacked by Libsafe
+    # TODO double-check which zip files are actually unpacked by Libsafe
     # TODO choice to calculate checksums inside Zip files or not?
     zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
     files = []
@@ -123,10 +123,11 @@ def runchecksum(tkroot, width_chars):
     zipcontent = {}
     n_archived_files = 0
     for ls in zipfiles:
-        # TODO skip the unecessaruy files here as well
+        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
         zipcontent[archivename] = [info.filename for info in archive.infolist() if not info.is_dir()]
+
         n_archived_files += len(zipcontent[archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
@@ -162,7 +163,7 @@ def runchecksum(tkroot, width_chars):
     for myzipfile in zipcontent:
         archive = zipfile.ZipFile(myzipfile, mode="r")
         archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
-        print(archive_path)
+        # print(archive_path)
         for archived_file in zipcontent[myzipfile]:
             progress += 1
             try:
