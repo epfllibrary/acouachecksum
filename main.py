@@ -7,7 +7,7 @@ from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
 from tkinter import filedialog, messagebox
-from tkinter import Tk, Button, Label, font
+from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
 
 from functools import partial
 from unicodedata import normalize
@@ -41,8 +41,9 @@ def md5Checksum(filePath, ziparchive=None):
     return m.hexdigest()
 
 
-def runchecksum(tkroot, width_chars):
+def runchecksum(tkroot, width_chars, check_zips):
     # Clear all existing text messages
+    do_zips = bool(check_zips.get())
     for label in tkroot.winfo_children():
         if type(label) is Label:
             label.destroy()
@@ -87,10 +88,13 @@ def runchecksum(tkroot, width_chars):
     # Create logfile for potential warnings and errors
     log_message(error_file_header)
 
-    nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
-    # TODO double-check which zip files are actually unpacked by Libsafe
-    # TODO choice to calculate checksums inside Zip files or not?
-    zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
+    if do_zips:
+        nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
+        zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
+    else:
+        nonzipfiles = pathlib.Path(choosedir).rglob('**/*')
+        zipfiles = []
+    
     files = []
     # Create Tk label for progress information: counting files
     progress_update_frequency = 10
@@ -204,7 +208,10 @@ root.wm_title("ACOUA CheckSum v" + version)
 width = 400
 width_chars = int(1.7*width / current_font.actual()['size'])
 root.geometry(f'{width}x250+1000+300')
+check_zips = IntVar()
+check_zips.set(1)
+Checkbutton(root, text="Calculate checksum inside Zip files?", variable=check_zips).pack()
 
 button_label = 'Select a directory and run checksum'
-Button(root, text=button_label, command=partial(runchecksum, root, width_chars)).pack()
+Button(root, text=button_label, command=partial(runchecksum, root, width_chars, check_zips)).pack()
 root.mainloop()
