@@ -164,12 +164,12 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
     
-    # TODO if necessary, handle full paths for files in Zips in subfolders
     for myzipfile in zipcontent:
         archive = zipfile.ZipFile(myzipfile, mode="r")
         archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
         for archived_file in zipcontent[myzipfile]:
+            print(myzipfile, archived_file)
             progress += 1
             try:
                 md5 = md5Checksum(archived_file, ziparchive=archive)
