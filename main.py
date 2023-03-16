@@ -1,5 +1,6 @@
 import hashlib
 import os
+import sys
 import glob
 import pathlib
 import zipfile
@@ -10,7 +11,7 @@ from tkinter import filedialog, messagebox
 from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
 
 from functools import partial
-from unicodedata import normalize
+from unicodedata import normalize, is_normalized
 
 version = "0.7.0"
 
@@ -21,6 +22,15 @@ def log_message(message):
     f_err = open(error_file, "a")
     f_err.write(message + '\n')
     f_err.close()
+
+
+def is_cp850(s):
+    # One way to check whether filenames are encoded as cp850 **sigh** or as utf-8
+    try:
+        x = s.encode('cp850').decode('utf-8')
+        return True
+    except:
+        return False
 
 
 def md5Checksum(filePath, ziparchive=None):
@@ -169,13 +179,14 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
         for archived_file in zipcontent[myzipfile]:
-            print(myzipfile, archived_file)
+            # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
+            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
             try:
                 md5 = md5Checksum(archived_file, ziparchive=archive)
                 # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
                 # also: NFC normalization for proper (composed) representation of accented characters
-                f.write(normalize('NFC',f'{md5} {archive_path + os.path.sep + archived_file}\n').encode("UTF-8"))
+                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.encode("UTF-8"))
             except Exception as e:
                 trace = str(e)
                 log_message(trace)
