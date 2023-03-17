@@ -11,7 +11,7 @@ from tkinter import filedialog, messagebox
 from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
 
 from functools import partial
-from unicodedata import normalize, is_normalized
+from unicodedata import normalize
 
 version = "0.7.0"
 
