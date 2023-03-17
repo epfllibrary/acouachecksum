@@ -15,7 +15,7 @@ In case the tool encounters errors, a warning will be displayed in the main wind
 
 The software for Windows and Macos can be found here : [Releases](https://github.com/epfllibrary/acouachecksum/releases)
 
-Linux user can use the source code to launch the program as ```python main.py``` after installing the required modules from the requirements.txt file.
+Linux user can use the source code to launch the program as ```python main.py``` after installing the required modules from the ```requirements.txt``` file.
 
 ## Source code
 
