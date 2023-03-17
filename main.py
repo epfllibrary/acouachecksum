@@ -185,7 +185,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             try:
                 md5 = md5Checksum(archived_file, ziparchive=archive)
                 # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                # also: NFC normalization for proper (composed) representation of accented characters
+                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
                 f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.encode("UTF-8"))
             except Exception as e:
                 trace = str(e)

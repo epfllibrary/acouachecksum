@@ -7,11 +7,15 @@ You can use this tool to generate the ```ACOUA_md5.md5```file needed for submitt
 
 # How to use the tool
 
-A full documentation can be found [here]() Note : Insert the KB link here when it's ready
+In the ACOUA Checksum tool, the user must select a directory containing a dataset to be archived (including the metadata.xml file).
+The tool will calculate md5 checksums for all files except MacOS ```.DS_Store``` and Windows ```Thumbs.db```. By default, the tool will calculate checksums for files contained in Zip files under the selected directory and not the Zip files themselves, in order to be compatible with the Libsafe Archive Extractor. In agreement with the Libsafe behavior (sanitizers executed before the Archive Extractor),  ACOUA Checksum calculates checksums for ```.DS_Store``` and ```Thumbs.db``` files contained in Zip files.
+The user can choose to calculate checksums for the Zip files instead of their content by unselecting the "Calculate checksum inside Zip files?" tick box.
 
-The software for Windows and macos can be found here : [Releases](https://github.com/epfllibrary/acouachecksum/releases)
+In case the tool encounters errors, a warning will be displayed in the main window of the tool and the errors will be logged in the ```ACOUA_md5_errors.txt``` file.
 
-Linux user can use the source code to launch the program.
+The software for Windows and Macos can be found here : [Releases](https://github.com/epfllibrary/acouachecksum/releases)
+
+Linux user can use the source code to launch the program as ```python main.py``` after installing the required modules from the requirements.txt file.
 
 ## Source code
 
