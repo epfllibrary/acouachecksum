@@ -46,6 +46,6 @@ Note : the ```build``` folder is a temporary folder used by pyinstaller.
 
 # Bash command equivalent
 
-You can also generate the ```ACOUA_md5.md5``` in console (bash) using this command, but character encoding problems are possible (the output file must be UTF-8) :
+If there are no Zip files in the dataset, or if you do not want to characterize their content, you can also generate the ```ACOUA_md5.md5``` in console (bash) using this command, but character encoding problems are possible (the output file must be UTF-8) :
 
 ```find . -type f -not -name ".DS_Store" -not -name "ACOUA_md5.md5" -exec md5 -r '{}' \; > ./ACOUA_md5.md5```
