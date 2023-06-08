@@ -99,8 +99,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     log_message(error_file_header)
 
     if do_zips:
-        nonzipfiles = pathlib.Path(choosedir).rglob('**/*[!.zip]')
         zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
+        nonzipfiles = [x for x in pathlib.Path(choosedir).rglob('**/*') if not x.name.endswith('.zip')]
     else:
         nonzipfiles = pathlib.Path(choosedir).rglob('**/*')
         zipfiles = []
