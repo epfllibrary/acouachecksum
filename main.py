@@ -113,6 +113,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     tkroot.update()
     for ls in nonzipfiles:
         # print(os.path.join(str(ls.parents[0]), ls.name))
+        # TODO adapter le check au contexte exact qui cause des soucis, i.e. dans le tampon de Libsafe
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
@@ -158,7 +159,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     tkroot.update()
 
     f = open("ACOUA_md5.md5", "wb")
-    
+
+    # TODO adapt path separator in the output to always use the one from Libsafe, i.e. Windows
     for element in files:
         progress += 1
         try:
