@@ -17,6 +17,10 @@ version = "0.7.2"
 
 error_file = "ACOUA_md5_errors.txt"
 
+# expected path of the ingestion folder... we use the test value, which is a bit longer
+libsafe_ingestion_path_prefix = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
+backslash = '\\'
+
 
 def log_message(message):
     f_err = open(error_file, "a")
@@ -76,6 +80,8 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
     choosedir = os.getcwd()
+    # get folder name, useful to check for path length
+    foldername = choosedir.split(os.sep)[-1]
 
     choosedir_display = ''
     line_length = 0
@@ -112,8 +118,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     progress_info.pack()
     tkroot.update()
     for ls in nonzipfiles:
-        # print(os.path.join(str(ls.parents[0]), ls.name))
-        # TODO adapter le check au contexte exact qui cause des soucis, i.e. dans le tampon de Libsafe
+        # check for excessive path length locally (in case the user has a problem)
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
@@ -124,6 +129,10 @@ def runchecksum(tkroot, width_chars, check_zips):
                 and not filename.startswith(os.path.join(choosedir, error_file)) \
                 and not filename.startswith(os.path.join('.', error_file)) \
                 and not os.path.isdir(filename):
+            # check for excessive expected path length locally (where libsafe will fail)
+            target_path = filename.replace(choosedir, libsafe_ingestion_path_prefix + foldername + '/')
+            if len(target_path) > MAX_PATH:
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
             #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
             if filename.startswith('/'):
                 files.append(filename[1:])
@@ -144,6 +153,12 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive = zipfile.ZipFile(archivename, mode="r")
         zipcontent[archivename] = [info.filename for info in archive.infolist() if not info.is_dir()]
 
+        for content_file in zipcontent[archivename]:
+            # check for excessive expected path length locally (where libsafe will fail)
+            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+            if len(target_path) > MAX_PATH:
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
+
         n_archived_files += len(zipcontent[archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
@@ -160,14 +175,13 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     f = open("ACOUA_md5.md5", "wb")
 
-    # TODO adapt path separator in the output to always use the one from Libsafe, i.e. Windows
     for element in files:
         progress += 1
         try:
             md5 = md5Checksum(element)
             # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
             # also: NFC normalization for proper (composed) representation of accented characters
-            f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".")}\n').encode("UTF-8"))
+            f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".").replace("/", backslash)}\n').encode("UTF-8"))
         except Exception as e:
             trace = str(e)
             log_message(trace)
@@ -188,7 +202,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 md5 = md5Checksum(archived_file, ziparchive=archive)
                 # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
                 # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
-                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.encode("UTF-8"))
+                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
             except Exception as e:
                 trace = str(e)
                 log_message(trace)
