@@ -13,7 +13,7 @@ from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
 from functools import partial
 from unicodedata import normalize
 
-version = "0.7.2"
+version = "0.7.3"
 
 error_file = "ACOUA_md5_errors.txt"
 
