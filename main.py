@@ -13,7 +13,7 @@ from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
 from functools import partial
 from unicodedata import normalize
 
-version = "0.7.3"
+version = "0.7.4"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -130,7 +130,8 @@ def runchecksum(tkroot, width_chars, check_zips):
                 and not filename.startswith(os.path.join('.', error_file)) \
                 and not os.path.isdir(filename):
             # check for excessive expected path length locally (where libsafe will fail)
-            target_path = filename.replace(choosedir, libsafe_ingestion_path_prefix + foldername + '/')
+            target_path = libsafe_ingestion_path_prefix + foldername + filename[1:]
+            # print(target_path)
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
             #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
