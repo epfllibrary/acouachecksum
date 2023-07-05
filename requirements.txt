@@ -2,3 +2,5 @@ altgraph==0.17
 macholib
 pyinstaller
 pyinstaller-hooks-contrib==2022.10
+py7zr
+rarfile

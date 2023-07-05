@@ -4,6 +4,7 @@ import sys
 import glob
 import pathlib
 import zipfile
+import py7zr
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
@@ -42,16 +43,20 @@ def md5Checksum(filePath, ziparchive=None):
     # switch to 1MB blocks to improve performance
     blocksize = 2**20
     if ziparchive is None:
-      fh = open(filePath, 'rb')
+        fh = open(filePath, 'rb')
+    elif isinstance(ziparchive, py7zr.SevenZipFile):
+        # Use the BytesIO part of the response, the filename can be discarded
+        ziparchive.reset()
+        fname, fh = list(ziparchive.read(filePath).items())[0]
     else:
-      fh = ziparchive.open(filePath, 'r')
+        fh = ziparchive.open(filePath, 'r')
     
     m = hashlib.md5()
     while True:
-      data = fh.read(blocksize)
-      if not data:
-        break
-      m.update(data)
+        data = fh.read(blocksize)
+        if not data:
+            break
+        m.update(data)
     return m.hexdigest()
 
 
@@ -62,7 +67,6 @@ def runchecksum(tkroot, width_chars, check_zips):
         if type(label) is Label:
             label.destroy()
     
-
     error_message = f"There were errors or warnings during processing:\ncheck {error_file} for information."
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
@@ -106,10 +110,14 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     if do_zips:
         zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
-        nonzipfiles = [x for x in pathlib.Path(choosedir).rglob('**/*') if not x.name.endswith('.zip')]
+        sevenzipfiles = pathlib.Path(choosedir).rglob('**/*.7z')
+        nonzipfiles = [x for x in pathlib.Path(choosedir).rglob('**/*')
+                       if not x.name.endswith('.zip')
+                       and not x.name.endswith('.7z')]
     else:
         nonzipfiles = pathlib.Path(choosedir).rglob('**/*')
         zipfiles = []
+        sevenzipfiles = []
     
     files = []
     # Create Tk label for progress information: counting files
@@ -164,6 +172,24 @@ def runchecksum(tkroot, width_chars, check_zips):
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
+    sevenzipcontent = {}
+    for ls in sevenzipfiles:
+        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
+        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
+        archivename = os.path.join(str(ls.parents[0]), ls.name)
+        archive = py7zr.SevenZipFile(archivename, mode="r")
+        sevenzipcontent[archivename] = [info.filename for info in archive.list() if not info.is_directory]
+
+        for content_file in sevenzipcontent[archivename]:
+            # check for excessive expected path length locally (where libsafe will fail)
+            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+            if len(target_path) > MAX_PATH:
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
+
+        n_archived_files += len(sevenzipcontent[archivename])
+        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
+        tkroot.update()
+
     total_files = len(files) + n_archived_files
 
     # print('Done listing')
@@ -196,6 +222,26 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
         for archived_file in zipcontent[myzipfile]:
+            # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
+            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
+            progress += 1
+            try:
+                md5 = md5Checksum(archived_file, ziparchive=archive)
+                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
+                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
+                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
+            except Exception as e:
+                trace = str(e)
+                log_message(trace)
+            if progress % progress_update_frequency == 0:
+                progress_info.config(text=f'Progress: {progress}/{total_files}')
+                tkroot.update()
+
+    for my7zipfile in sevenzipcontent:
+        archive = py7zr.SevenZipFile(my7zipfile, mode="r")
+        archive_path = os.path.sep.join(my7zipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
+        # print(archive_path)
+        for archived_file in sevenzipcontent[my7zipfile]:
             # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
