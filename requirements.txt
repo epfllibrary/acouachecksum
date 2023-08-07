@@ -1,3 +1,4 @@
+wheel
 altgraph==0.17
 macholib
 pyinstaller
