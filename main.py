@@ -12,7 +12,7 @@ from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
 import tkinter as tk
-from tkinter import font, filedialog
+from tkinter import font, filedialog, ttk
 
 from functools import partial
 from unicodedata import normalize
@@ -406,17 +406,27 @@ root.geometry(f'{width}x550+1000+300')
 check_zips = tk.IntVar()
 check_zips.set(1)
 tk.Checkbutton(root, text="Calculate checksum inside Zip files?", variable=check_zips).pack()
-zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")  
-listbox = tk.Listbox(root,  selectmode=tk.MULTIPLE)
+zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
+frm = tk.Frame()
+listbox = tk.Listbox(frm,  selectmode=tk.MULTIPLE)
 listbox.insert(1,".zip")
 listbox.insert(2, ".7z")
 listbox.insert(3, ".rar")  
 listbox.insert(4, ".zip")
+
+
+scrollbar = ttk.Scrollbar(frm, orient= 'vertical')
+#scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+listbox.config(yscrollcommand=scrollbar.set)
+scrollbar.config(command=listbox.yview)
+
 for arch_format in compressed_extensions:
     tk.Button(root, text=f"Add {arch_format}", command=partial(add_archiver, arch_format)).pack()
 delete_btn = tk.Button(root, text = "Delete selected", command=remove_archiver)
 zip_select_lbl.pack()
+scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
 listbox.pack()
+frm.pack()
 delete_btn.pack()  
 
 button_label = 'Select a directory and run checksum'
