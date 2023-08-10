@@ -7,6 +7,7 @@ import shutil
 import zipfile
 import py7zr
 import tarfile
+import rarfile
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
@@ -120,15 +121,18 @@ def runchecksum(tkroot, width_chars, check_zips):
         zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
         sevenzipfiles = pathlib.Path(choosedir).rglob('**/*.7z')
         tarfiles = pathlib.Path(choosedir).rglob('**/*.tar')
+        rarfiles = pathlib.Path(choosedir).rglob('**/*.rar')
         nonzipfiles = [x for x in pathlib.Path(choosedir).rglob('**/*')
                        if not x.name.endswith('.zip')
                        and not x.name.endswith('.7z')
-                       and not x.name.endswith('.tar')]
+                       and not x.name.endswith('.tar')
+                       and not x.name.endswith('.rar')]
     else:
         nonzipfiles = pathlib.Path(choosedir).rglob('**/*')
         zipfiles = []
         sevenzipfiles = []
         tarfiles = []
+        rarfiles = []
     
     files = []
     # Create Tk label for progress information: counting files
@@ -222,6 +226,27 @@ def runchecksum(tkroot, width_chars, check_zips):
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
+    rarcontent = {}
+    for ls in rarfiles:
+        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in rar files
+        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
+        archivename = os.path.join(str(ls.parents[0]), ls.name)
+        archive = rarfile.RarFile(archivename, mode="r")
+        rarcontent[archivename] = []
+        for info in archive:
+            if not info.isdir():
+                rarcontent[archivename].append(info.filename)
+
+        for content_file in rarcontent[archivename]:
+            # check for excessive expected path length locally (where libsafe will fail)
+            rarget_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+            if len(rarget_path) > MAX_PATH:
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {rarget_path}")
+
+        n_archived_files += len(rarcontent[archivename])
+        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
+        tkroot.update()
+
     total_files = len(files) + n_archived_files
 
     # print('Done listing')
@@ -294,6 +319,26 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive_path = os.path.sep.join(mytarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
         for archived_file in tarcontent[mytarfile]:
+            # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
+            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
+            progress += 1
+            try:
+                md5 = md5Checksum(archived_file, ziparchive=archive)
+                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
+                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
+                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
+            except Exception as e:
+                trace = str(e)
+                log_message(trace)
+            if progress % progress_update_frequency == 0:
+                progress_info.config(text=f'Progress: {progress}/{total_files}')
+                tkroot.update()
+
+    for myrarfile in rarcontent:
+        archive = rarfile.RarFile(myrarfile, mode="r")
+        archive_path = os.path.sep.join(myrarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
+        # print(archive_path)
+        for archived_file in rarcontent[myrarfile]:
             # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
