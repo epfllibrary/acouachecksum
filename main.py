@@ -25,6 +25,9 @@ error_file = "ACOUA_md5_errors.txt"
 libsafe_ingestion_path_prefix = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
 backslash = '\\'
 
+compressed_extensions = ('.zip', '.7z', '.rar', '.tar')
+multipart_hint_extensions = ('.z01', '.z001', '.part1.rar')
+
 
 def log_message(message):
     f_err = open(error_file, "a")
@@ -116,7 +119,14 @@ def runchecksum(tkroot, width_chars, check_zips):
     # Create logfile for potential warnings and errors
     log_message(error_file_header)
 
+    all_files = list(pathlib.Path(choosedir).rglob('**/*'))
+    for hint in multipart_hint_extensions:
+        for file in all_files:
+            if file.name.endswith(hint):
+                log_message(f"{file.name} seems to be part of a multipart archive, this is not supported and will probably fail.")
+
     # TODO compressed formats are not processed simultaneously, this needs to be adapated
+
     if do_zips:
         zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
         sevenzipfiles = pathlib.Path(choosedir).rglob('**/*.7z')
