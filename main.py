@@ -11,8 +11,8 @@ import rarfile
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
-from tkinter import filedialog, messagebox
-from tkinter import Tk, Button, Label, font, IntVar, Checkbutton
+import tkinter as tk
+from tkinter import font
 
 from functools import partial
 from unicodedata import normalize
@@ -27,6 +27,16 @@ backslash = '\\'
 
 compressed_extensions = ('.zip', '.7z', '.rar', '.tar')
 multipart_hint_extensions = ('.z01', '.z001', '.part1.rar')
+
+
+def remove_archiver():
+    selected_checkboxs = listbox.curselection()
+    for selected_checkbox in selected_checkboxs[::-1]:
+        listbox.delete(selected_checkbox)
+
+
+def add_archiver(arch_format):
+    listbox.insert("end", arch_format)
 
 
 def log_message(message):
@@ -75,14 +85,14 @@ def runchecksum(tkroot, width_chars, check_zips):
     # Clear all existing text messages
     do_zips = bool(check_zips.get())
     for label in tkroot.winfo_children():
-        if type(label) is Label:
+        if type(label) is tk.Label:
             label.destroy()
     
     error_message = f"There were errors or warnings during processing:\ncheck {error_file} for information."
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
     d_title = "Select your ingestion folder"
-    choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
+    choosedir = tk.filedialog.askdirectory(initialdir=Path.home(), title=d_title)
     if choosedir == '' or not os.path.exists(choosedir):
         return
     os.chdir(choosedir)
@@ -112,7 +122,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             choosedir_display += fs_level + os.sep
             line_length = len(fs_level) + 1
 
-    path_info = Label(tkroot, text=f'Processing:\n{choosedir_display}')
+    path_info = tk.Label(tkroot, text=f'Processing:\n{choosedir_display}')
     path_info.pack()
     tkroot.update()
 
@@ -132,22 +142,22 @@ def runchecksum(tkroot, width_chars, check_zips):
         sevenzipfiles = pathlib.Path(choosedir).rglob('**/*.7z')
         tarfiles = pathlib.Path(choosedir).rglob('**/*.tar')
         rarfiles = pathlib.Path(choosedir).rglob('**/*.rar')
-        nonzipfiles = [x for x in pathlib.Path(choosedir).rglob('**/*')
+        nonzipfiles = [x for x in all_files
                        if not x.name.endswith('.zip')
                        and not x.name.endswith('.7z')
                        and not x.name.endswith('.tar')
                        and not x.name.endswith('.rar')]
     else:
-        nonzipfiles = pathlib.Path(choosedir).rglob('**/*')
+        nonzipfiles = all_files
         zipfiles = []
         sevenzipfiles = []
         tarfiles = []
         rarfiles = []
     
     files = []
-    # Create Tk label for progress information: counting files
+    # Create tk.Tk label for progress information: counting files
     progress_update_frequency = 10
-    progress_info = Label(tkroot, text=f'Listing: {len(files)} files')
+    progress_info = tk.Label(tkroot, text=f'Listing: {len(files)} files')
     progress_info.pack()
     tkroot.update()
     for ls in nonzipfiles:
@@ -376,23 +386,35 @@ def runchecksum(tkroot, width_chars, check_zips):
     if error_content.replace('\r', '').replace('\n', '') == error_file_header.replace('\r', '').replace('\n', ''):
         os.remove(error_file)
     else:
-        error_info = Label(tkroot, text=error_message)
+        error_info = tk.Label(tkroot, text=error_message)
         error_info.pack()
 
-    done_info = Label(tkroot, text=f'Done: ACOUA_md5.md5 has been created')
+    done_info = tk.Label(tkroot, text=f'Done: ACOUA_md5.md5 has been created')
     done_info.pack()
 
 
-root = Tk()
+root = tk.Tk()
 current_font = font.nametofont("TkDefaultFont")
 root.wm_title("ACOUA CheckSum v" + version)
 width = 400
 width_chars = int(1.7*width / current_font.actual()['size'])
-root.geometry(f'{width}x250+1000+300')
-check_zips = IntVar()
+root.geometry(f'{width}x550+1000+300')
+check_zips = tk.IntVar()
 check_zips.set(1)
-Checkbutton(root, text="Calculate checksum inside Zip files?", variable=check_zips).pack()
+tk.Checkbutton(root, text="Calculate checksum inside Zip files?", variable=check_zips).pack()
+zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")  
+listbox = tk.Listbox(root,  selectmode=tk.MULTIPLE)
+listbox.insert(1,".zip")
+listbox.insert(2, ".7z")
+listbox.insert(3, ".rar")  
+listbox.insert(4, ".zip")
+for arch_format in compressed_extensions:
+    tk.Button(root, text=f"Add {arch_format}", command=partial(add_archiver, arch_format)).pack()
+delete_btn = tk.Button(root, text = "Delete selected", command=remove_archiver)
+zip_select_lbl.pack()
+listbox.pack()
+delete_btn.pack()  
 
 button_label = 'Select a directory and run checksum'
-Button(root, text=button_label, command=partial(runchecksum, root, width_chars, check_zips)).pack()
+tk.Button(root, text=button_label, command=partial(runchecksum, root, width_chars, check_zips)).pack()
 root.mainloop()
