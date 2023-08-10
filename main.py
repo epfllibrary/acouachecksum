@@ -12,7 +12,7 @@ from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
 import tkinter as tk
-from tkinter import font
+from tkinter import font, filedialog
 
 from functools import partial
 from unicodedata import normalize
@@ -84,6 +84,10 @@ def md5Checksum(filePath, ziparchive=None):
 def runchecksum(tkroot, width_chars, check_zips):
     # Clear all existing text messages
     do_zips = bool(check_zips.get())
+
+    archiver_list = listbox.get(0 , tk.END)
+    print('archiver list', archiver_list)
+
     for label in tkroot.winfo_children():
         if type(label) is tk.Label:
             label.destroy()
@@ -92,7 +96,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
     d_title = "Select your ingestion folder"
-    choosedir = tk.filedialog.askdirectory(initialdir=Path.home(), title=d_title)
+    choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
     if choosedir == '' or not os.path.exists(choosedir):
         return
     os.chdir(choosedir)
