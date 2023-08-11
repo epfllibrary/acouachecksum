@@ -121,7 +121,7 @@ def md5Checksum(filePath, ziparchive=None):
         shutil.rmtree(tmp_checksum_folder)
     else:
         fh = ziparchive.open(filePath, 'r')
-    
+
     m = hashlib.md5()
     while True:
         data = fh.read(blocksize)
@@ -135,13 +135,13 @@ def runchecksum(tkroot, width_chars, check_zips):
     # Clear all existing text messages
     do_zips = bool(check_zips.get())
 
-    archiver_list = listbox.get(0 , tk.END)
+    archiver_list = listbox.get(0, tk.END)
     print('archiver list', archiver_list)
 
     for label in tkroot.winfo_children():
         if type(label) is tk.Label:
             label.destroy()
-    
+
     error_message = f"There were errors or warnings during processing:\ncheck {error_file} for information."
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
@@ -189,7 +189,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             if file.name.endswith(hint):
                 log_message(f"{file.name} seems to be part of a multipart archive, this is not supported and will probably fail.")
 
-    # TODO compressed formats are not processed simultaneously, this needs to be adapated
+    # TODO compressed formats are not processed simultaneously, this needs to be adapted
 
     arch_files = {}
     if do_zips:
@@ -208,7 +208,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         arch_files['.7z'] = []
         arch_files['.tar'] = []
         arch_files['.rar'] = []
-    
+
     files = []
     # Create tk.Tk label for progress information: counting files
     progress_update_frequency = 10
@@ -282,7 +282,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             md5 = md5Checksum(element)
             # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
             # also: NFC normalization for proper (composed) representation of accented characters
-            f.write(normalize('NFC',f'{md5} {element.replace(choosedir,".").replace("/", backslash)}\n').encode("UTF-8"))
+            f.write(normalize('NFC', f'{md5} {element.replace(choosedir, ".").replace("/", backslash)}\n').encode("UTF-8"))
         except Exception as e:
             trace = str(e)
             log_message(trace)
@@ -290,7 +290,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             #print(f'Progress: {progress}/{len(files)}')
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
-    
+
     for extension in compressed_extensions:
         for myarchfile in arch_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
@@ -344,14 +344,12 @@ zip_select_lbl.pack()
 frm = tk.Frame()
 listbox = tk.Listbox(frm,  selectmode=tk.MULTIPLE)
 # TODO discuss standard default
-listbox.insert(1,".zip")
+listbox.insert(1, ".zip")
 listbox.insert(2, ".7z")
-listbox.insert(3, ".rar")  
+listbox.insert(3, ".rar")
 listbox.insert(4, ".zip")
 
-
-scrollbar = ttk.Scrollbar(frm, orient= 'vertical')
-#scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+scrollbar = ttk.Scrollbar(frm, orient='vertical')
 listbox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=listbox.yview)
 
@@ -364,7 +362,7 @@ delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
 scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
 listbox.pack()
 frm.pack()
-delete_btn.pack()  
+delete_btn.pack()
 
 button_label = 'Select a directory and run checksum'
 tk.Button(root, text=button_label, command=partial(runchecksum, root, width_chars, check_zips)).pack()
