@@ -42,13 +42,13 @@ def add_archiver(arch_format):
 # A few generic functions to handle divergences between zipfile, py7zr, etc. classes.
 
 def archive_content(archive):
-    if isinstance(archive, zipfile.Zipfile):
+    if isinstance(archive, zipfile.ZipFile):
         return archive.infolist()
-    if isinstance(py7zr.SevenZipFile):
+    if isinstance(archive, py7zr.SevenZipFile):
         return archive.list()
-    if isinstance(tarfile.TarFile):
+    if isinstance(archive, tarfile.TarFile):
         return archive.getmembers()
-    if isinstance(earfile.RarFile):
+    if isinstance(archive, rarfile.RarFile):
         return archive.infolist()
 
 
@@ -234,7 +234,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
-        zipcontent[archivename] = [info.filename for info in archive.infolist() if not isdir(info)]
+        zipcontent[archivename] = [info.filename for info in archive_content(archive) if not isdir(info)]
 
         for content_file in zipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
@@ -252,7 +252,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = py7zr.SevenZipFile(archivename, mode="r")
-        sevenzipcontent[archivename] = [info.filename for info in archive.list() if not isdir(info)]
+        sevenzipcontent[archivename] = [info.filename for info in archive_content(archive) if not isdir(info)]
         for content_file in sevenzipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
@@ -270,7 +270,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = tarfile.TarFile(archivename, mode="r")
         tarcontent[archivename] = []
-        for info in archive:
+        for info in archive_content(archive):
             if not isdir(info):
                 tarcontent[archivename].append(info.name)
 
@@ -291,7 +291,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = rarfile.RarFile(archivename, mode="r")
         rarcontent[archivename] = []
-        for info in archive:
+        for info in archive_content(archive):
             if not isdir(info):
                 rarcontent[archivename].append(info.filename)
 
