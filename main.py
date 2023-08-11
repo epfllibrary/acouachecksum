@@ -41,6 +41,18 @@ def add_archiver(arch_format):
 
 # A few generic functions to handle divergences between zipfile, py7zr, etc. classes.
 
+def open_archive(ls, extension):
+    archivename = os.path.join(str(ls.parents[0]), ls.name)
+    if extension == '.zip':
+        return (archivename, zipfile.ZipFile(archivename, mode="r"))
+    if extension == '.7z':
+        return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
+    if extension == '.rar':
+        return (archivename, rarfile.RarFile(archivename, mode="r"))
+    if extension == '.tar':
+        return (archivename, tarfile.TarFile(archivename, mode="r"))
+
+
 def archive_content(archive):
     if isinstance(archive, zipfile.ZipFile):
         return archive.infolist()
@@ -232,8 +244,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     for ls in zipfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        archivename = os.path.join(str(ls.parents[0]), ls.name)
-        archive = zipfile.ZipFile(archivename, mode="r")
+        (archivename, archive) = open_archive(ls, '.zip')
         zipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in zipcontent[archivename]:
@@ -250,8 +261,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     for ls in sevenzipfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        archivename = os.path.join(str(ls.parents[0]), ls.name)
-        archive = py7zr.SevenZipFile(archivename, mode="r")
+        (archivename, archive) = open_archive(ls, '.7z')
         sevenzipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
         for content_file in sevenzipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
@@ -267,8 +277,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     for ls in tarfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in tar files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        archivename = os.path.join(str(ls.parents[0]), ls.name)
-        archive = tarfile.TarFile(archivename, mode="r")
+        (archivename, archive) = open_archive(ls, '.tar')
         tarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in tarcontent[archivename]:
@@ -285,8 +294,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     for ls in rarfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in rar files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        archivename = os.path.join(str(ls.parents[0]), ls.name)
-        archive = rarfile.RarFile(archivename, mode="r")
+        (archivename, archive) = open_archive(ls, '.rar')
         rarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in rarcontent[archivename]:
