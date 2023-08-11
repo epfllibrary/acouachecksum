@@ -234,7 +234,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
-        zipcontent[archivename] = [info.filename for info in archive_content(archive) if not isdir(info)]
+        zipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in zipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
@@ -252,7 +252,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = py7zr.SevenZipFile(archivename, mode="r")
-        sevenzipcontent[archivename] = [info.filename for info in archive_content(archive) if not isdir(info)]
+        sevenzipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
         for content_file in sevenzipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
@@ -269,10 +269,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = tarfile.TarFile(archivename, mode="r")
-        tarcontent[archivename] = []
-        for info in archive_content(archive):
-            if not isdir(info):
-                tarcontent[archivename].append(info.name)
+        tarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in tarcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
@@ -290,16 +287,13 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = rarfile.RarFile(archivename, mode="r")
-        rarcontent[archivename] = []
-        for info in archive_content(archive):
-            if not isdir(info):
-                rarcontent[archivename].append(info.filename)
+        rarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
         for content_file in rarcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
-            rarget_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
-            if len(rarget_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {rarget_path}")
+            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+            if len(target_path) > MAX_PATH:
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
         n_archived_files += len(rarcontent[archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
