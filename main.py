@@ -188,11 +188,12 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     # TODO compressed formats are not processed simultaneously, this needs to be adapated
 
+    arch_files = {}
     if do_zips:
-        zipfiles = pathlib.Path(choosedir).rglob('**/*.zip')
-        sevenzipfiles = pathlib.Path(choosedir).rglob('**/*.7z')
-        tarfiles = pathlib.Path(choosedir).rglob('**/*.tar')
-        rarfiles = pathlib.Path(choosedir).rglob('**/*.rar')
+        arch_files['.zip'] = pathlib.Path(choosedir).rglob('**/*.zip')
+        arch_files['.7z'] = pathlib.Path(choosedir).rglob('**/*.7z')
+        arch_files['.tar'] = pathlib.Path(choosedir).rglob('**/*.tar')
+        arch_files['.rar'] = pathlib.Path(choosedir).rglob('**/*.rar')
         nonzipfiles = [x for x in all_files
                        if not x.name.endswith('.zip')
                        and not x.name.endswith('.7z')
@@ -200,10 +201,10 @@ def runchecksum(tkroot, width_chars, check_zips):
                        and not x.name.endswith('.rar')]
     else:
         nonzipfiles = all_files
-        zipfiles = []
-        sevenzipfiles = []
-        tarfiles = []
-        rarfiles = []
+        arch_files['.zip'] = []
+        arch_files['.7z'] = []
+        arch_files['.tar'] = []
+        arch_files['.rar'] = []
     
     files = []
     # Create tk.Tk label for progress information: counting files
@@ -245,69 +246,22 @@ def runchecksum(tkroot, width_chars, check_zips):
         arch_content[extension] = {}
 
     n_archived_files = 0
-    for ls in zipfiles:
-        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
-        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        (archivename, archive) = open_archive(ls, '.zip')
-        arch_content['.zip'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+    for extension in compressed_extensions:
+        for ls in arch_files[extension]:
+            # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip and other archive files
+            # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
+            (archivename, archive) = open_archive(ls, extension)
+            arch_content[extension][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
-        for content_file in arch_content['.zip'][archivename]:
-            # check for excessive expected path length locally (where libsafe will fail)
-            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
-            if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
+            for content_file in arch_content[extension][archivename]:
+                # check for excessive expected path length locally (where libsafe will fail)
+                target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+                if len(target_path) > MAX_PATH:
+                    log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
-        n_archived_files += len(arch_content['.zip'][archivename])
-        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
-        tkroot.update()
-
-    for ls in sevenzipfiles:
-        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
-        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        (archivename, archive) = open_archive(ls, '.7z')
-        arch_content['.7z'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
-        for content_file in arch_content['.7z'][archivename]:
-            # check for excessive expected path length locally (where libsafe will fail)
-            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
-            if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
-
-        n_archived_files += len(arch_content['.7z'][archivename])
-        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
-        tkroot.update()
-
-    for ls in tarfiles:
-        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in tar files
-        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        (archivename, archive) = open_archive(ls, '.tar')
-        arch_content['.tar'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
-
-        for content_file in arch_content['.tar'][archivename]:
-            # check for excessive expected path length locally (where libsafe will fail)
-            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
-            if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
-
-        n_archived_files += len(arch_content['.tar'][archivename])
-        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
-        tkroot.update()
-
-    for ls in rarfiles:
-        # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in rar files
-        # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
-        (archivename, archive) = open_archive(ls, '.rar')
-        arch_content['.rar'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
-
-        for content_file in arch_content['.rar'][archivename]:
-            # check for excessive expected path length locally (where libsafe will fail)
-            target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
-            if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
-
-        n_archived_files += len(rarch_content['.rar'][archivename])
-        progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
-        tkroot.update()
-
+            n_archived_files += len(arch_content[extension][archivename])
+            progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
+            tkroot.update()
     total_files = len(files) + n_archived_files
 
     # print('Done listing')
