@@ -39,6 +39,41 @@ def add_archiver(arch_format):
     listbox.insert("end", arch_format)
 
 
+# A few generic functions to handle divergences between zipfile, py7zr, etc. classes.
+
+def archive_content(archive):
+    if isinstance(archive, zipfile.Zipfile):
+        return archive.infolist()
+    if isinstance(py7zr.SevenZipFile):
+        return archive.list()
+    if isinstance(tarfile.TarFile):
+        return archive.getmembers()
+    if isinstance(earfile.RarFile):
+        return archive.infolist()
+
+
+def isdir(arch_object):
+    if isinstance(arch_object, zipfile.ZipInfo):
+        return arch_object.is_dir()
+    if isinstance(arch_object, py7zr.FileInfo):
+        return arch_object.is_directory
+    if isinstance(arch_object, tarfile.TarInfo):
+        return arch_object.isdir()
+    if isinstance(arch_object, rarfile.RarInfo):
+        return arch_object.isdir()
+
+
+def archive_object_filename(arch_object):
+    if isinstance(arch_object, zipfile.ZipInfo):
+        return arch_object.filename
+    if isinstance(arch_object, py7zr.FileInfo):
+        return arch_object.filename
+    if isinstance(arch_object, tarfile.TarInfo):
+        return arch_object.name
+    if isinstance(arch_object, rarfile.RarInfo):
+        return arch_object.filename
+
+
 def log_message(message):
     f_err = open(error_file, "a")
     f_err.write(message + '\n')
@@ -199,7 +234,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = zipfile.ZipFile(archivename, mode="r")
-        zipcontent[archivename] = [info.filename for info in archive.infolist() if not info.is_dir()]
+        zipcontent[archivename] = [info.filename for info in archive.infolist() if not isdir(info)]
 
         for content_file in zipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
@@ -217,8 +252,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         archivename = os.path.join(str(ls.parents[0]), ls.name)
         archive = py7zr.SevenZipFile(archivename, mode="r")
-        sevenzipcontent[archivename] = [info.filename for info in archive.list() if not info.is_directory]
-
+        sevenzipcontent[archivename] = [info.filename for info in archive.list() if not isdir(info)]
         for content_file in sevenzipcontent[archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
@@ -237,7 +271,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive = tarfile.TarFile(archivename, mode="r")
         tarcontent[archivename] = []
         for info in archive:
-            if not info.isdir():
+            if not isdir(info):
                 tarcontent[archivename].append(info.name)
 
         for content_file in tarcontent[archivename]:
@@ -258,7 +292,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         archive = rarfile.RarFile(archivename, mode="r")
         rarcontent[archivename] = []
         for info in archive:
-            if not info.isdir():
+            if not isdir(info):
                 rarcontent[archivename].append(info.filename)
 
         for content_file in rarcontent[archivename]:
@@ -410,6 +444,7 @@ zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
 zip_select_lbl.pack()
 frm = tk.Frame()
 listbox = tk.Listbox(frm,  selectmode=tk.MULTIPLE)
+# TODO discuss standard default
 listbox.insert(1,".zip")
 listbox.insert(2, ".7z")
 listbox.insert(3, ".rar")  
