@@ -42,7 +42,10 @@ def add_archiver(arch_format):
 # A few generic functions to handle divergences between zipfile, py7zr, etc. classes.
 
 def open_archive(ls, extension):
-    archivename = os.path.join(str(ls.parents[0]), ls.name)
+    if isinstance(ls, pathlib.PosixPath):
+        archivename = os.path.join(str(ls.parents[0]), ls.name)
+    if isinstance(ls, str):
+        archivename = ls
     if extension == '.zip':
         return (archivename, zipfile.ZipFile(archivename, mode="r"))
     if extension == '.7z':
@@ -240,7 +243,6 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
-
     arch_content = {}
     for extension in compressed_extensions:
         arch_content[extension] = {}
@@ -289,86 +291,26 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
     
-    for myzipfile in arch_content['.zip']:
-        archive = zipfile.ZipFile(myzipfile, mode="r")
-        archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
-        # print(archive_path)
-        for archived_file in arch_content['.zip'][myzipfile]:
-            # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
-            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
-            progress += 1
-            try:
-                md5 = md5Checksum(archived_file, ziparchive=archive)
-                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
-                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
-            except Exception as e:
-                trace = str(e)
-                log_message(trace)
-            if progress % progress_update_frequency == 0:
-                progress_info.config(text=f'Progress: {progress}/{total_files}')
-                tkroot.update()
-
-    for my7zipfile in arch_content['.7z']:
-        archive = py7zr.SevenZipFile(my7zipfile, mode="r")
-        archive_path = os.path.sep.join(my7zipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
-        # print(archive_path)
-        for archived_file in arch_content['.7z'][my7zipfile]:
-            # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
-            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
-            progress += 1
-            try:
-                md5 = md5Checksum(archived_file, ziparchive=archive)
-                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
-                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
-            except Exception as e:
-                trace = str(e)
-                log_message(trace)
-            if progress % progress_update_frequency == 0:
-                progress_info.config(text=f'Progress: {progress}/{total_files}')
-                tkroot.update()
-
-    for mytarfile in arch_content['.tar']:
-        archive = tarfile.TarFile(mytarfile, mode="r")
-        archive_path = os.path.sep.join(mytarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
-        # print(archive_path)
-        for archived_file in arch_content['.tar'][mytarfile]:
-            # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
-            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
-            progress += 1
-            try:
-                md5 = md5Checksum(archived_file, ziparchive=archive)
-                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
-                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
-            except Exception as e:
-                trace = str(e)
-                log_message(trace)
-            if progress % progress_update_frequency == 0:
-                progress_info.config(text=f'Progress: {progress}/{total_files}')
-                tkroot.update()
-
-    for myrarfile in arch_content['.rar']:
-        archive = rarfile.RarFile(myrarfile, mode="r")
-        archive_path = os.path.sep.join(myrarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
-        # print(archive_path)
-        for archived_file in arch_content['.tar'][myrarfile]:
-            # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
-            assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
-            progress += 1
-            try:
-                md5 = md5Checksum(archived_file, ziparchive=archive)
-                # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
-                f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
-            except Exception as e:
-                trace = str(e)
-                log_message(trace)
-            if progress % progress_update_frequency == 0:
-                progress_info.config(text=f'Progress: {progress}/{total_files}')
-                tkroot.update()
-
+    for extension in compressed_extensions:
+        for myarchfile in arch_content[extension]:
+            (archivename, archive) = open_archive(myarchfile, extension)
+            archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1]).replace(choosedir, '.')
+            # print(archive_path)
+            for archived_file in arch_content[extension][myarchfile]:
+                # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
+                assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
+                progress += 1
+                try:
+                    md5 = md5Checksum(archived_file, ziparchive=archive)
+                    # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
+                    # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
+                    f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
+                except Exception as e:
+                    trace = str(e)
+                    log_message(trace)
+                if progress % progress_update_frequency == 0:
+                    progress_info.config(text=f'Progress: {progress}/{total_files}')
+                    tkroot.update()
 
     f.close()
     progress_info.config(text=f'Progress: {progress}/{total_files}')
