@@ -239,71 +239,72 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
-    zipcontent = {}
+
+    arch_content = {}
+    for extension in compressed_extensions:
+        arch_content[extension] = {}
+
     n_archived_files = 0
     for ls in zipfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         (archivename, archive) = open_archive(ls, '.zip')
-        zipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+        arch_content['.zip'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
-        for content_file in zipcontent[archivename]:
+        for content_file in arch_content['.zip'][archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
-        n_archived_files += len(zipcontent[archivename])
+        n_archived_files += len(arch_content['.zip'][archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
-    sevenzipcontent = {}
     for ls in sevenzipfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         (archivename, archive) = open_archive(ls, '.7z')
-        sevenzipcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
-        for content_file in sevenzipcontent[archivename]:
+        arch_content['.7z'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+        for content_file in arch_content['.7z'][archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
-        n_archived_files += len(sevenzipcontent[archivename])
+        n_archived_files += len(arch_content['.7z'][archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
-    tarcontent = {}
     for ls in tarfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in tar files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         (archivename, archive) = open_archive(ls, '.tar')
-        tarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+        arch_content['.tar'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
-        for content_file in tarcontent[archivename]:
+        for content_file in arch_content['.tar'][archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
-        n_archived_files += len(tarcontent[archivename])
+        n_archived_files += len(arch_content['.tar'][archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
-    rarcontent = {}
     for ls in rarfiles:
         # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in rar files
         # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
         (archivename, archive) = open_archive(ls, '.rar')
-        rarcontent[archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+        arch_content['.rar'][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
 
-        for content_file in rarcontent[archivename]:
+        for content_file in arch_content['.rar'][archivename]:
             # check for excessive expected path length locally (where libsafe will fail)
             target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
 
-        n_archived_files += len(rarcontent[archivename])
+        n_archived_files += len(rarch_content['.rar'][archivename])
         progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
         tkroot.update()
 
@@ -334,11 +335,11 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
     
-    for myzipfile in zipcontent:
+    for myzipfile in arch_content['.zip']:
         archive = zipfile.ZipFile(myzipfile, mode="r")
         archive_path = os.path.sep.join(myzipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
-        for archived_file in zipcontent[myzipfile]:
+        for archived_file in arch_content['.zip'][myzipfile]:
             # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
@@ -354,11 +355,11 @@ def runchecksum(tkroot, width_chars, check_zips):
                 progress_info.config(text=f'Progress: {progress}/{total_files}')
                 tkroot.update()
 
-    for my7zipfile in sevenzipcontent:
+    for my7zipfile in arch_content['.7z']:
         archive = py7zr.SevenZipFile(my7zipfile, mode="r")
         archive_path = os.path.sep.join(my7zipfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
-        for archived_file in sevenzipcontent[my7zipfile]:
+        for archived_file in arch_content['.7z'][my7zipfile]:
             # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
@@ -374,11 +375,11 @@ def runchecksum(tkroot, width_chars, check_zips):
                 progress_info.config(text=f'Progress: {progress}/{total_files}')
                 tkroot.update()
 
-    for mytarfile in tarcontent:
+    for mytarfile in arch_content['.tar']:
         archive = tarfile.TarFile(mytarfile, mode="r")
         archive_path = os.path.sep.join(mytarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
-        for archived_file in tarcontent[mytarfile]:
+        for archived_file in arch_content['.tar'][mytarfile]:
             # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
@@ -394,11 +395,11 @@ def runchecksum(tkroot, width_chars, check_zips):
                 progress_info.config(text=f'Progress: {progress}/{total_files}')
                 tkroot.update()
 
-    for myrarfile in rarcontent:
+    for myrarfile in arch_content['.rar']:
         archive = rarfile.RarFile(myrarfile, mode="r")
         archive_path = os.path.sep.join(myrarfile.split(os.sep)[0:-1]).replace(choosedir, '.')
         # print(archive_path)
-        for archived_file in rarcontent[myrarfile]:
+        for archived_file in arch_content['.tar'][myrarfile]:
             # Filenames of objects inside a rar are either cp850/cp437 (old style) or utf-8. Let's check
             assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
             progress += 1
