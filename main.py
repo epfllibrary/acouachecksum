@@ -21,8 +21,9 @@ version = "0.8"
 
 error_file = "ACOUA_md5_errors.txt"
 
-# expected path of the ingestion folder... we use the test value, which is a bit longer
-libsafe_ingestion_path_prefix = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
+# expected path of the ingestion folder...
+# we use the test value, which is a bit longer
+libsafe_ingestion_path = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
 backslash = '\\'
 
 compressed_extensions = ('.zip', '.7z', '.rar', '.tar')
@@ -39,7 +40,8 @@ def add_archiver(arch_format):
     listbox.insert("end", arch_format)
 
 
-# A few generic functions to handle divergences between zipfile, py7zr, etc. classes.
+# A few generic functions to handle divergences between main classes:
+# from modules zipfile, py7zr, etc. .
 
 def open_archive(ls, extension):
     if isinstance(ls, pathlib.PosixPath):
@@ -100,7 +102,9 @@ def is_cp850(s):
     try:
         x = s.encode('cp850').decode('utf-8')
         return True
-    except:
+    except Exception as e:
+        trace = str(e)
+        log_message(trace)
         return False
 
 
@@ -142,7 +146,8 @@ def runchecksum(tkroot, width_chars, check_zips):
         if type(label) is tk.Label:
             label.destroy()
 
-    error_message = f"There were errors or warnings during processing:\ncheck {error_file} for information."
+    error_message = f"There were errors or warnings during processing:\n"
+    error_message += "check {error_file} for information."
     error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
     d_title = "Select your ingestion folder"
@@ -157,7 +162,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     except OSError:
         pass
 
-    # Normalize base folder to the OS's convention, disregard askdirectory()'s weirdness
+    # Normalize base folder to the OS's convention
+    # (disregard askdirectory()'s weirdness)
     choosedir = os.getcwd()
     # get folder name, useful to check for path length
     foldername = choosedir.split(os.sep)[-1]
@@ -187,7 +193,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     for hint in multipart_hint_extensions:
         for file in all_files:
             if file.name.endswith(hint):
-                log_message(f"{file.name} seems to be part of a multipart archive, this is not supported and will probably fail.")
+                log_message(f"{file.name} seems to be part of a multipart archive.")
+                log_message("=> this is not supported and will probably fail.")
 
     # TODO compressed formats are not processed simultaneously, this needs to be adapted
 
@@ -218,7 +225,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     for ls in nonzipfiles:
         # check for excessive path length locally (in case the user has a problem)
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
-            log_message(f"WARNING > {MAX_PATH} chars for path + file name: {os.path.join(str(ls.parents[0]), ls.name)}")
+            log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
+            log_message(f"-> {os.path.join(str(ls.parents[0]), ls.name)}")
         filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
         if not filename.endswith(os.sep + '.DS_Store') \
                 and not filename.endswith(os.sep + 'Thumbs.db') \
@@ -228,18 +236,19 @@ def runchecksum(tkroot, width_chars, check_zips):
                 and not filename.startswith(os.path.join('.', error_file)) \
                 and not os.path.isdir(filename):
             # check for excessive expected path length locally (where libsafe will fail)
-            target_path = libsafe_ingestion_path_prefix + foldername + filename[1:]
+            target_path = libsafe_ingestion_path + foldername + filename[1:]
             # print(target_path)
             if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
-            #filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
+                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
+                log_message(f"-> {target_path}")
+            # filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
             if filename.startswith('/'):
                 files.append(filename[1:])
             else:
                 files.append(filename)
 
         if len(files) % progress_update_frequency == 0:
-            #print(f'Listing: {len(files)} files')
+            # print(f'Listing: {len(files)} files')
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
@@ -250,25 +259,28 @@ def runchecksum(tkroot, width_chars, check_zips):
     n_archived_files = 0
     for extension in compressed_extensions:
         for ls in arch_files[extension]:
-            # Note: .DS_Store and Thumbs.db will not be deleted by Libsafe if contained in Zip and other archive files
-            # Libsafe Sanitizers are run before preprocessors such as the Archive Extractor
+            # Libsafe Sanitizers are run before the Archive Extractor
+            # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
             (archivename, archive) = open_archive(ls, extension)
-            arch_content[extension][archivename] = [archive_object_filename(info) for info in archive_content(archive) if not isdir(info)]
+            arch_content[extension][archivename] = [archive_object_filename(info)
+                                                    for info in archive_content(archive)
+                                                    if not isdir(info)]
 
             for content_file in arch_content[extension][archivename]:
                 # check for excessive expected path length locally (where libsafe will fail)
-                target_path = libsafe_ingestion_path_prefix + foldername + '/' + content_file
+                target_path = libsafe_ingestion_path + foldername + '/' + content_file
                 if len(target_path) > MAX_PATH:
-                    log_message(f"WARNING > {MAX_PATH} chars for expected path + file name: {target_path}")
+                    log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
+                    log_message(f"-> {target_path}")
 
             n_archived_files += len(arch_content[extension][archivename])
-            progress_info.config(text=f'Listing: {len(files) + n_archived_files} files')
+            progress_msg = f'Listing: {len(files) + n_archived_files} files'
+            progress_info.config(text=progress_msg)
             tkroot.update()
     total_files = len(files) + n_archived_files
 
     # print('Done listing')
-    # the progress information label will now display the actual checksum progress
-    # switch to individual file progress frequency: chekcsum is much slower
+    # now display the actual checksum progress
     progress_update_frequency = 1
     progress = 0
     progress_info .config(text=f'Checksum progress: {progress}/{total_files}')
@@ -280,14 +292,15 @@ def runchecksum(tkroot, width_chars, check_zips):
         progress += 1
         try:
             md5 = md5Checksum(element)
-            # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-            # also: NFC normalization for proper (composed) representation of accented characters
+            # In order to match what Libsafe sees on the filesystem:
+            # - filenames must be encoded as UTF-8
+            # - NFC normalization for representation of accented characters
             f.write(normalize('NFC', f'{md5} {element.replace(choosedir, ".").replace("/", backslash)}\n').encode("UTF-8"))
         except Exception as e:
             trace = str(e)
             log_message(trace)
         if progress % progress_update_frequency == 0:
-            #print(f'Progress: {progress}/{len(files)}')
+            # print(f'Progress: {progress}/{len(files)}')
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
 
@@ -302,14 +315,16 @@ def runchecksum(tkroot, width_chars, check_zips):
                 progress += 1
                 try:
                     md5 = md5Checksum(archived_file, ziparchive=archive)
-                    # filenames must be encoded as UTF-8, or they might not match what Libsafe sees on the filesystem
-                    # Here explicit NFC normalization is not desired: the Libsafe Archive Extractor will manage.
+                    # In order to match what Libsafe sees on the filesystem:
+                    # - filenames must be encoded as UTF-8
+                    # - NFC normalization is not needed: the Libsafe Archive Extractor will manage
                     f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
                 except Exception as e:
                     trace = str(e)
                     log_message(trace)
                 if progress % progress_update_frequency == 0:
-                    progress_info.config(text=f'Progress: {progress}/{total_files}')
+                    progress_msg = f'Progress: {progress}/{total_files}'
+                    progress_info.config(text=progress_msg)
                     tkroot.update()
 
     f.close()
@@ -319,7 +334,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     f_err = open(error_file, "r")
     error_content = f_err.read()
     f_err.close()
-    
+
     if error_content.replace('\r', '').replace('\n', '') == error_file_header.replace('\r', '').replace('\n', ''):
         os.remove(error_file)
     else:
@@ -338,7 +353,8 @@ width_chars = int(1.7*width / current_font.actual()['size'])
 root.geometry(f'{width}x550+1000+300')
 check_zips = tk.IntVar()
 check_zips.set(1)
-tk.Checkbutton(root, text="Calculate checksum inside Zip and similar files?", variable=check_zips).pack()
+checkbutton_label = "Calculate checksum inside Zip and similar files?"
+tk.Checkbutton(root, text=checkbutton_label, variable=check_zips).pack()
 zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
 zip_select_lbl.pack()
 frm = tk.Frame()
@@ -355,7 +371,8 @@ scrollbar.config(command=listbox.yview)
 
 btn_frm = tk.Frame()
 for arch_format in compressed_extensions:
-    tk.Button(btn_frm, text=f"Add {arch_format}", command=partial(add_archiver, arch_format)).pack(side=tk.LEFT)
+    callback = partial(add_archiver, arch_format)
+    tk.Button(btn_frm, text=f"Add {arch_format}", command=callback).pack(side=tk.LEFT)
 btn_frm.pack()
 delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
 
@@ -365,5 +382,6 @@ frm.pack()
 delete_btn.pack()
 
 button_label = 'Select a directory and run checksum'
-tk.Button(root, text=button_label, command=partial(runchecksum, root, width_chars, check_zips)).pack()
+callback = partial(runchecksum, root, width_chars, check_zips)
+tk.Button(root, text=button_label, command=callback).pack()
 root.mainloop()
