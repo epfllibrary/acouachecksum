@@ -253,18 +253,24 @@ def runchecksum(tkroot, width_chars, check_zips):
             tkroot.update()
 
     arch_content = {}
-    for extension in compressed_extensions:
+    for extension in archiver_list:
         arch_content[extension] = {}
 
     n_archived_files = 0
-    for extension in compressed_extensions:
+    for idx, extension in enumerate(archiver_list):
         for ls in arch_files[extension]:
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
             (archivename, archive) = open_archive(ls, extension)
-            arch_content[extension][archivename] = [archive_object_filename(info)
-                                                    for info in archive_content(archive)
-                                                    if not isdir(info)]
+            # TODO: implement behvior for content that would be extension[idx+1] in the sequence
+            for info in archive_content(archive):
+                print(archive_object_filename(info))
+                arch_content[extension][archivename] = []
+                if idx <= len(archiver_list) - 1:
+                    if archive_object_filename(info).endswith(archiver_list[idx+1]):
+                        print(f"Within {ls} : found {archive_object_filename(info)}")
+                if not isdir(info):
+                    arch_content[extension][archivename].append(archive_object_filename(info))
 
             for content_file in arch_content[extension][archivename]:
                 # check for excessive expected path length locally (where libsafe will fail)
@@ -304,7 +310,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Progress: {progress}/{total_files}')
             tkroot.update()
 
-    for extension in compressed_extensions:
+    for extension in archiver_list:
         for myarchfile in arch_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
             archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1]).replace(choosedir, '.')
