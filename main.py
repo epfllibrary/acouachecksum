@@ -76,19 +76,31 @@ def open_archive(ls, extension, parent=None):
     else:
         print(ls)
         if isinstance(ls, zipfile.ZipInfo):
-            subarch = zipfile.ZipFile(parent.open(ls, mode='r'), mode='r')
-            archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
-            print(archivename, subarch)
-            return (archivename, subarch)
+            try:
+                subarch = zipfile.ZipFile(parent.open(ls, mode='r'), mode='r')
+                archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
+                print(archivename, subarch)
+                return (archivename, subarch)
+            except zipfile.BadZipFile:
+                return (None, None)
         elif isinstance(ls, zipfile.ZipExtFile):
             archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
             return (archivename, ls)
         elif isinstance(ls, py7zr.SevenZipInfo):
-            pass
+            try:
+                pass
+            except py7zr.exceptions.Bad7zFile:
+                return (None, None)
         elif isinstance(ls, rarfile.RarInfo):
-            pass
+            try:
+                pass
+            except rarfile.NotRarFile:
+                return (None, None)
         elif isinstance(ls, tarfile.TarInfo):
-            pass
+            try:
+                pass
+            except tarfile.ReadError:
+                return (None, None)
 
 def archive_content(archive):
     if isinstance(archive, zipfile.ZipFile):
@@ -323,8 +335,9 @@ def runchecksum(tkroot, width_chars, check_zips):
                     if archive_object_filename(info).endswith(archiver_list[idx+1]):
                         print(f"Within {ls} : found {archive_object_filename(info)}")
                         (subarchname, sub_arch) = open_archive(info, archiver_list[idx+1], parent=archive)
-                        for x in archive_content(sub_arch):
-                            print(x)
+                        if sub_arch is not None:
+                            for x in archive_content(sub_arch):
+                                print('sub_arch contains:', x)
                 if not isdir(info):
                     arch_content[extension][archivename].append(archive_object_filename(info))
 
