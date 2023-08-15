@@ -277,8 +277,9 @@ def runchecksum(tkroot, width_chars, check_zips):
     # 
     arch_files = []
     if do_zips:
-        for extension in archiver_list:
-            arch_files.append(list(pathlib.Path(choosedir).rglob(f'**/*{extension}')))
+        for (idx, extension) in enumerate(archiver_list):
+            if idx == 0 or (extension not in archiver_list[0:idx-1]):
+                arch_files.append(list(pathlib.Path(choosedir).rglob(f'**/*{extension}')))
 
         nonzipfiles = [x for x in all_files if not any([x.name.endswith(ext) for ext in archiver_list])]
 
