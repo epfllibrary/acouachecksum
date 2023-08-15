@@ -78,6 +78,7 @@ def open_archive(ls, extension, parent=None):
             trace = str(e)
             log_message(trace)
             log_message(f"{archivename} is not a valid {extension} file.")
+            return (archivename, None)
     else:
         print(ls)
         if isinstance(ls, zipfile.ZipInfo):
@@ -108,6 +109,8 @@ def open_archive(ls, extension, parent=None):
                 return (None, None)
 
 def archive_content(archive):
+    if archive is None:
+        return []
     if isinstance(archive, zipfile.ZipFile):
         return archive.infolist()
     if isinstance(archive, py7zr.SevenZipFile):
@@ -333,10 +336,10 @@ def runchecksum(tkroot, width_chars, check_zips):
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
             # TODO handle ls == None when an invalid file was seem previously
             (archivename, archive) = open_archive(ls, extension)
+            arch_content[extension][archivename] = []
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
             for info in archive_content(archive):
                 print(archive_object_filename(info))
-                arch_content[extension][archivename] = []
                 if idx <= len(archiver_list) - 2:
                     if archive_object_filename(info).endswith(archiver_list[idx+1]):
                         print(f"Within {ls} : found {archive_object_filename(info)}")
