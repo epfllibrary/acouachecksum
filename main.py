@@ -335,6 +335,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         arch_content[extension] = {}
 
     n_archived_files = 0
+    # TODO adapt to process arch_content, then switch to subsequent formats in arch_backlog
     for idx, extension in enumerate(archiver_list):
         for ls in arch_files[extension]:
             # Libsafe Sanitizers are run before the Archive Extractor
