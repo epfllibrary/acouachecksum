@@ -45,7 +45,6 @@ def add_archiver(arch_format):
 
 def open_archive(ls, extension, parent=None):
     # IN PROGRESS what should archivename be if ls is an archive within another archive?
-    # TODO handle exceptions for files with the designated extension that aren't valid (ex. ._*.zip from OSX causes a zipfile.BadZipFile)
     if parent is None:
         print('ls is a', type(ls))
         if isinstance(ls, pathlib.PosixPath):
@@ -334,10 +333,10 @@ def runchecksum(tkroot, width_chars, check_zips):
         for ls in arch_files[extension]:
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
-            # TODO handle ls == None when an invalid file was seem previously
             (archivename, archive) = open_archive(ls, extension)
             arch_content[extension][archivename] = []
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
+            # TODO: there could other sub archives further down the sequence as well...
             for info in archive_content(archive):
                 print(archive_object_filename(info))
                 if idx <= len(archiver_list) - 2:
