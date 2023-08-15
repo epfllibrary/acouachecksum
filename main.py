@@ -43,20 +43,52 @@ def add_archiver(arch_format):
 # A few generic functions to handle divergences between main classes:
 # from modules zipfile, py7zr, etc. .
 
-def open_archive(ls, extension):
-    if isinstance(ls, pathlib.PosixPath):
-        archivename = os.path.join(str(ls.parents[0]), ls.name)
-    if isinstance(ls, str):
-        archivename = ls
-    if extension == '.zip':
-        return (archivename, zipfile.ZipFile(archivename, mode="r"))
-    if extension == '.7z':
-        return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
-    if extension == '.rar':
-        return (archivename, rarfile.RarFile(archivename, mode="r"))
-    if extension == '.tar':
-        return (archivename, tarfile.TarFile(archivename, mode="r"))
+def open_archive(ls, extension, parent=None):
+    # IN PROGRESS what should archivename be if ls is an archive within another archive?
+    # TODO handle exceptions for files with the designated extension that aren't valid (ex. ._*.zip from OSX causes a zipfile.BadZipFile)
+    if parent is None:
+        print('ls is a', type(ls))
+        if isinstance(ls, pathlib.PosixPath):
+            archivename = os.path.join(str(ls.parents[0]), ls.name)
+        elif isinstance(ls, str):
+            archivename = ls
+        elif isinstance(ls, zipfile.ZipFile):
+            archivename = archive_filename(ls)
+        elif isinstance(ls, zipfile.ZipExtFile):
+            archivename = archive_filename(ls)
+        elif isinstance(ls, py7zr.SevenZipFile):
+            archivename = archive_filename(ls)
+        elif isinstance(ls, tarfile.TarFile):
+            archivename = archive_filename(ls)
+        elif isinstance(ls, rarfile.RarFile):
+            archivename = archive_filename(ls)
+        else:
+            archivename = '[dummy]'
 
+        if extension == '.zip':
+            return (archivename, zipfile.ZipFile(archivename, mode="r"))
+        if extension == '.7z':
+            return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
+        if extension == '.rar':
+            return (archivename, rarfile.RarFile(archivename, mode="r"))
+        if extension == '.tar':
+            return (archivename, tarfile.TarFile(archivename, mode="r"))
+    else:
+        print(ls)
+        if isinstance(ls, zipfile.ZipInfo):
+            subarch = zipfile.ZipFile(parent.open(ls, mode='r'), mode='r')
+            archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
+            print(archivename, subarch)
+            return (archivename, subarch)
+        elif isinstance(ls, zipfile.ZipExtFile):
+            archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
+            return (archivename, ls)
+        elif isinstance(ls, py7zr.SevenZipInfo):
+            pass
+        elif isinstance(ls, rarfile.RarInfo):
+            pass
+        elif isinstance(ls, tarfile.TarInfo):
+            pass
 
 def archive_content(archive):
     if isinstance(archive, zipfile.ZipFile):
@@ -67,6 +99,27 @@ def archive_content(archive):
         return archive.getmembers()
     if isinstance(archive, rarfile.RarFile):
         return archive.infolist()
+
+
+def archive_filename(archive):
+    if isinstance(archive, zipfile.ZipFile):
+        return archive.filename
+    if isinstance(archive, zipfile.ZipExtFile):
+        return archive.name
+    if isinstance(archive, py7zr.SevenZipFile):
+        return archive.filename
+    if isinstance(archive, tarfile.TarFile):
+        return archive.filename
+    if isinstance(archive, rarfile.RarFile):
+        return archive.filename
+    if isinstance(archive, zipfile.ZipInfo):
+        return archive.filename
+    if isinstance(archive, py7zr.ArchiveInfo):
+        return archive.filename
+    if isinstance(archive, tarfile.TarInfo):
+        return archive.filename
+    if isinstance(archive, rarfile.RarInfo):
+        return archive.filename
 
 
 def isdir(arch_object):
@@ -266,9 +319,12 @@ def runchecksum(tkroot, width_chars, check_zips):
             for info in archive_content(archive):
                 print(archive_object_filename(info))
                 arch_content[extension][archivename] = []
-                if idx <= len(archiver_list) - 1:
+                if idx <= len(archiver_list) - 2:
                     if archive_object_filename(info).endswith(archiver_list[idx+1]):
                         print(f"Within {ls} : found {archive_object_filename(info)}")
+                        (subarchname, sub_arch) = open_archive(info, archiver_list[idx+1], parent=archive)
+                        for x in archive_content(sub_arch):
+                            print(x)
                 if not isdir(info):
                     arch_content[extension][archivename].append(archive_object_filename(info))
 
