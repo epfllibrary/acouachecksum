@@ -212,6 +212,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     do_zips = bool(check_zips.get())
 
     archiver_list = listbox.get(0, tk.END)
+    if len(archiver_list) == 0:
+        archiver_list = ['.zip']
     print('archiver list', archiver_list)
 
     for label in tkroot.winfo_children():
@@ -269,24 +271,28 @@ def runchecksum(tkroot, width_chars, check_zips):
                 log_message("=> this is not supported and will probably fail.")
 
     # TODO compressed formats are not processed simultaneously, this needs to be adapted
-
+    # 
     arch_files = {}
+    arch_backlog = {}
     if do_zips:
-        arch_files['.zip'] = pathlib.Path(choosedir).rglob('**/*.zip')
-        arch_files['.7z'] = pathlib.Path(choosedir).rglob('**/*.7z')
-        arch_files['.tar'] = pathlib.Path(choosedir).rglob('**/*.tar')
-        arch_files['.rar'] = pathlib.Path(choosedir).rglob('**/*.rar')
-        nonzipfiles = [x for x in all_files
-                       if not x.name.endswith('.zip')
-                       and not x.name.endswith('.7z')
-                       and not x.name.endswith('.tar')
-                       and not x.name.endswith('.rar')]
+        arch_files[archiver_list[0]] = list(pathlib.Path(choosedir).rglob(f'**/*{archiver_list[0]}'))
+        for extension in archiver_list[1:]:
+            if extension != archiver_list[0]:
+                arch_files[extension] = []
+                arch_backlog[extension] = list(pathlib.Path(choosedir).rglob(f'**/*{extension}'))
+
+        nonzipfiles = [x for x in all_files if not any([x.name.endswith(ext) for ext in archiver_list])]
+
     else:
         nonzipfiles = all_files
-        arch_files['.zip'] = []
-        arch_files['.7z'] = []
-        arch_files['.tar'] = []
-        arch_files['.rar'] = []
+        for extension in compressed_extensions:
+            arch_files[extension] = []
+            arch_backlog[extension] = []
+
+    print('arch now:', arch_files)
+    print('arch later:', arch_backlog)
+    print('non arch', nonzipfiles)
+
 
     files = []
     # Create tk.Tk label for progress information: counting files
