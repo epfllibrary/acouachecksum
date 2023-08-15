@@ -65,14 +65,19 @@ def open_archive(ls, extension, parent=None):
         else:
             archivename = '[dummy]'
 
-        if extension == '.zip':
-            return (archivename, zipfile.ZipFile(archivename, mode="r"))
-        if extension == '.7z':
-            return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
-        if extension == '.rar':
-            return (archivename, rarfile.RarFile(archivename, mode="r"))
-        if extension == '.tar':
-            return (archivename, tarfile.TarFile(archivename, mode="r"))
+        try:
+            if extension == '.zip':
+                return (archivename, zipfile.ZipFile(archivename, mode="r"))
+            if extension == '.7z':
+                return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
+            if extension == '.rar':
+                return (archivename, rarfile.RarFile(archivename, mode="r"))
+            if extension == '.tar':
+                return (archivename, tarfile.TarFile(archivename, mode="r"))
+        except (zipfile.BadZipFile, py7zr.exceptions.Bad7zFile, rarfile.NotRarFile, tarfile.ReadError) as e:
+            trace = str(e)
+            log_message(trace)
+            log_message(f"{archivename} is not a valid {extension} file.")
     else:
         print(ls)
         if isinstance(ls, zipfile.ZipInfo):
@@ -326,6 +331,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         for ls in arch_files[extension]:
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
+            # TODO handle ls == None when an invalid file was seem previously
             (archivename, archive) = open_archive(ls, extension)
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
             for info in archive_content(archive):
