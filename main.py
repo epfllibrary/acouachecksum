@@ -211,7 +211,10 @@ def runchecksum(tkroot, width_chars, check_zips):
     # Clear all existing text messages
     do_zips = bool(check_zips.get())
 
-    archiver_list = listbox.get(0, tk.END)
+    if do_zips:
+        archiver_list = listbox.get(0, tk.END)
+    else:
+        archiver_list = []
     if len(archiver_list) == 0:
         archiver_list = ['.zip']
     print('archiver list', archiver_list)
@@ -272,25 +275,20 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     # TODO compressed formats are not processed simultaneously, this needs to be adapted
     # 
-    arch_files = {}
-    arch_backlog = {}
+    arch_files = []
     if do_zips:
-        arch_files[archiver_list[0]] = list(pathlib.Path(choosedir).rglob(f'**/*{archiver_list[0]}'))
-        for extension in archiver_list[1:]:
-            if extension != archiver_list[0]:
-                arch_files[extension] = []
-                arch_backlog[extension] = list(pathlib.Path(choosedir).rglob(f'**/*{extension}'))
+        for extension in archiver_list:
+            arch_files.append(list(pathlib.Path(choosedir).rglob(f'**/*{extension}')))
 
         nonzipfiles = [x for x in all_files if not any([x.name.endswith(ext) for ext in archiver_list])]
 
     else:
         nonzipfiles = all_files
         for extension in compressed_extensions:
-            arch_files[extension] = []
+            arch_files.append((extension, []))
             arch_backlog[extension] = []
 
-    print('arch now:', arch_files)
-    print('arch later:', arch_backlog)
+    print('arch:', arch_files)
     print('non arch', nonzipfiles)
 
 
@@ -337,7 +335,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     n_archived_files = 0
     # TODO adapt to process arch_content, then switch to subsequent formats in arch_backlog
     for idx, extension in enumerate(archiver_list):
-        for ls in arch_files[extension]:
+        for ls in arch_files[idx]:
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
             (archivename, archive) = open_archive(ls, extension)
