@@ -73,7 +73,10 @@ def open_archive(ls, extension, parent=None):
                 return (archivename, rarfile.RarFile(archivename, mode="r"))
             if extension == '.tar':
                 return (archivename, tarfile.TarFile(archivename, mode="r"))
-        except (zipfile.BadZipFile, py7zr.exceptions.Bad7zFile, rarfile.NotRarFile, tarfile.ReadError) as e:
+        except (zipfile.BadZipFile,
+                py7zr.exceptions.Bad7zFile,
+                rarfile.NotRarFile,
+                tarfile.ReadError) as e:
             trace = str(e)
             log_message(trace)
             log_message(f"{archivename} is not a valid {extension} file.")
@@ -106,6 +109,7 @@ def open_archive(ls, extension, parent=None):
                 pass
             except tarfile.ReadError:
                 return (None, None)
+
 
 def archive_content(archive):
     if archive is None:
@@ -170,7 +174,7 @@ def log_message(message):
 
 
 def is_cp850(s):
-    # One way to check whether filenames are encoded as cp850 **sigh** or as utf-8
+    # check whether filenames are encoded as cp850 **sigh** or utf-8
     try:
         x = s.encode('cp850').decode('utf-8')
         return True
@@ -292,7 +296,6 @@ def runchecksum(tkroot, width_chars, check_zips):
     print('arch:', arch_files)
     print('non arch', nonzipfiles)
 
-
     files = []
     # Create tk.Tk label for progress information: counting files
     progress_update_frequency = 10
@@ -300,19 +303,22 @@ def runchecksum(tkroot, width_chars, check_zips):
     progress_info.pack()
     tkroot.update()
     for ls in nonzipfiles:
-        # check for excessive path length locally (in case the user has a problem)
+        # check for excessive path length locally
+        # (in case the user has a problem)
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
             log_message(f"-> {os.path.join(str(ls.parents[0]), ls.name)}")
-        filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'), ls.name)
+        filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'),
+                                ls.name)
         if not filename.endswith(os.sep + '.DS_Store') \
-                and not filename.endswith(os.sep + 'Thumbs.db') \
-                and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
-                and not filename.startswith(os.path.join('.', 'ACOUA_md5.md5')) \
-                and not filename.startswith(os.path.join(choosedir, error_file)) \
-                and not filename.startswith(os.path.join('.', error_file)) \
-                and not os.path.isdir(filename):
-            # check for excessive expected path length locally (where libsafe will fail)
+           and not filename.endswith(os.sep + 'Thumbs.db') \
+           and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
+           and not filename.startswith(os.path.join('.', 'ACOUA_md5.md5')) \
+           and not filename.startswith(os.path.join(choosedir, error_file)) \
+           and not filename.startswith(os.path.join('.', error_file)) \
+           and not os.path.isdir(filename):
+            # check for excessive expected path length locally
+            # (where libsafe will fail)
             target_path = libsafe_ingestion_path + foldername + filename[1:]
             # print(target_path)
             if len(target_path) > MAX_PATH:
@@ -396,10 +402,13 @@ def runchecksum(tkroot, width_chars, check_zips):
     for extension in archiver_list:
         for myarchfile in arch_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
-            archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1]).replace(choosedir, '.')
+            archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1])
+            archive_path = archive_path.replace(choosedir, '.')
             # print(archive_path)
             for archived_file in arch_content[extension][myarchfile]:
-                # Filenames of objects inside a zip are either cp850/cp437 (old style) or utf-8. Let's check
+                # Filenames of objects inside a zip are either:
+                # 1) cp850/cp437 (old style)
+                # 2) utf-8. Let's check
                 assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
                 progress += 1
                 try:
@@ -430,7 +439,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         error_info = tk.Label(tkroot, text=error_message)
         error_info.pack()
 
-    done_info = tk.Label(tkroot, text=f'Done: ACOUA_md5.md5 has been created')
+    done_info = tk.Label(tkroot, text='Done: ACOUA_md5.md5 has been created')
     done_info.pack()
 
 
@@ -461,7 +470,9 @@ scrollbar.config(command=listbox.yview)
 btn_frm = tk.Frame()
 for arch_format in compressed_extensions:
     callback = partial(add_archiver, arch_format)
-    tk.Button(btn_frm, text=f"Add {arch_format}", command=callback).pack(side=tk.LEFT)
+    tk.Button(btn_frm,
+              text=f"Add {arch_format}",
+              command=callback).pack(side=tk.LEFT)
 btn_frm.pack()
 delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
 
