@@ -11,6 +11,8 @@ import rarfile
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
+import collections
+
 import tkinter as tk
 from tkinter import font, filedialog, ttk
 
@@ -373,6 +375,12 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=progress_msg)
             tkroot.update()
     total_files = len(files) + n_archived_files
+
+
+    # check for full path !+ filename collisions that will result in data loss and/or ingestion errors
+    name_collisions = [(item, count) for item, count in collections.Counter(files).items() if count > 1]
+    for conflict in name_collisions:
+        log_message(f"Name conflict: {conflict[0]} is found {conflict[1]} times in your dataset (probably from several compressed files).")
 
     # print('Done listing')
     # now display the actual checksum progress
