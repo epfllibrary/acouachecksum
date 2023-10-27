@@ -338,7 +338,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
-    final_filelist += files
+    final_filelist += [f.lower() for f in files]
 
     arch_content = {}
     for extension in archiver_list:
@@ -369,7 +369,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             for content_file in arch_content[extension][archivename]:
                 # check for excessive expected path length locally (where libsafe will fail)
                 target_path = libsafe_ingestion_path + foldername + '/' + content_file
-                final_filelist.append(target_path)
+                final_filelist.append(target_path.lower())
                 if len(target_path) > MAX_PATH:
                     log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
                     log_message(f"-> {target_path}")
