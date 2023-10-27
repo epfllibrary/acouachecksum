@@ -230,8 +230,8 @@ def runchecksum(tkroot, width_chars, check_zips):
             label.destroy()
 
     error_message = f"There were errors or warnings during processing:\n"
-    error_message += "check {error_file} for information."
-    error_file_header = "This is the acouachecksum log for errors and warnings. Do not archive.\n"
+    error_message += f"check {error_file} for information."
+    error_file_header = f"This is the acouachecksum log for errors and warnings. Do not archive.\n"
 
     d_title = "Select your ingestion folder"
     choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
@@ -299,6 +299,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     print('non arch', nonzipfiles)
 
     files = []
+    final_filelist = []
     # Create tk.Tk label for progress information: counting files
     progress_update_frequency = 10
     progress_info = tk.Label(tkroot, text=f'Listing: {len(files)} files')
@@ -337,6 +338,8 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f'Listing: {len(files)} files')
             tkroot.update()
 
+    final_filelist += files
+
     arch_content = {}
     for extension in archiver_list:
         arch_content[extension] = {}
@@ -366,6 +369,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             for content_file in arch_content[extension][archivename]:
                 # check for excessive expected path length locally (where libsafe will fail)
                 target_path = libsafe_ingestion_path + foldername + '/' + content_file
+                final_filelist.append(target_path)
                 if len(target_path) > MAX_PATH:
                     log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
                     log_message(f"-> {target_path}")
@@ -376,11 +380,10 @@ def runchecksum(tkroot, width_chars, check_zips):
             tkroot.update()
     total_files = len(files) + n_archived_files
 
-
     # check for full path !+ filename collisions that will result in data loss and/or ingestion errors
-    name_collisions = [(item, count) for item, count in collections.Counter(files).items() if count > 1]
+    name_collisions = [(item, count) for item, count in collections.Counter(final_filelist).items() if count > 1]
     for conflict in name_collisions:
-        log_message(f"Name conflict: {conflict[0]} is found {conflict[1]} times in your dataset (probably from several compressed files).")
+        log_message(f"Name conflict: {conflict[0]} will occur {conflict[1]} times in your dataset (probably from several compressed files).")
 
     # print('Done listing')
     # now display the actual checksum progress
