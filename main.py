@@ -19,7 +19,7 @@ from tkinter import font, filedialog, ttk
 from functools import partial
 from unicodedata import normalize
 
-version = "0.8"
+version = "0.9"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -468,11 +468,11 @@ zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
 zip_select_lbl.pack()
 frm = tk.Frame()
 listbox = tk.Listbox(frm,  selectmode=tk.MULTIPLE)
-# TODO discuss standard default
+# 2023-11-01 We will only use one single format for now
 listbox.insert(1, ".zip")
-listbox.insert(2, ".7z")
-listbox.insert(3, ".rar")
-listbox.insert(4, ".zip")
+#listbox.insert(2, ".7z")
+#listbox.insert(3, ".rar")
+#listbox.insert(4, ".zip")
 
 scrollbar = ttk.Scrollbar(frm, orient='vertical')
 listbox.config(yscrollcommand=scrollbar.set)
