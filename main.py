@@ -49,7 +49,7 @@ def open_archive(ls, extension, parent=None):
     # IN PROGRESS what should archivename be if ls is an archive within another archive?
     if parent is None:
         print('ls is a', type(ls))
-        if isinstance(ls, pathlib.PosixPath):
+        if isinstance(ls, pathlib.PosixPath) or isinstance(ls, pathlib.WindowsPath):
             archivename = os.path.join(str(ls.parents[0]), ls.name)
         elif isinstance(ls, str):
             archivename = ls
