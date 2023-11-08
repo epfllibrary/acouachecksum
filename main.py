@@ -28,7 +28,7 @@ error_file = "ACOUA_md5_errors.txt"
 libsafe_ingestion_path = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
 backslash = '\\'
 
-compressed_extensions = ('.zip', '.7z', '.rar', '.tar')
+compressed_extensions = ('.zip', '.7z', '.rar', '.tar', '.tar.gz')
 multipart_hint_extensions = ('.z01', '.z001', '.part1.rar')
 
 
@@ -73,11 +73,11 @@ def open_archive(ls, extension, parent=None):
                 return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
             if extension == '.rar':
                 return (archivename, rarfile.RarFile(archivename, mode="r"))
-            if extension == '.tar':
+            if extension == '.tar' or extension == '.tar.gz':
                 return (archivename, tarfile.TarFile(archivename, mode="r"))
         except (zipfile.BadZipFile,
                 py7zr.exceptions.Bad7zFile,
-                rarfile.NotRarFile,
+                rarfile.Error,
                 tarfile.ReadError) as e:
             trace = str(e)
             log_message(trace)
@@ -457,7 +457,7 @@ def runchecksum(tkroot, width_chars, check_zips):
 root = tk.Tk()
 current_font = font.nametofont("TkDefaultFont")
 root.wm_title("ACOUA CheckSum v" + version)
-width = 400
+width = 500
 width_chars = int(1.7*width / current_font.actual()['size'])
 root.geometry(f'{width}x550+1000+300')
 check_zips = tk.IntVar()
