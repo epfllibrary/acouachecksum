@@ -74,7 +74,7 @@ def open_archive(ls, extension, parent=None):
             if extension == '.rar':
                 return (archivename, rarfile.RarFile(archivename, mode="r"))
             if extension == '.tar' or extension == '.tar.gz':
-                return (archivename, tarfile.TarFile(archivename, mode="r"))
+                return (archivename, tarfile.open(archivename, mode="r"))
         except (zipfile.BadZipFile,
                 py7zr.exceptions.Bad7zFile,
                 rarfile.Error,
@@ -348,6 +348,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     # TODO adapt to process arch_content, then switch to subsequent formats in arch_backlog
     for idx, extension in enumerate(archiver_list):
         for ls in arch_files[idx]:
+            print(extension, ls)
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
             (archivename, archive) = open_archive(ls, extension)
