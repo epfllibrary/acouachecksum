@@ -231,7 +231,7 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     error_message = f"There were errors or warnings during processing:\n"
     error_message += f"check {error_file} for information."
-    error_file_header = f"This is the acouachecksum log for errors and warnings. Do not archive.\n"
+    error_file_header = f"This is the acouachecksum {version} log for errors and warnings. Do not archive.\n"
 
     d_title = "Select your ingestion folder"
     choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
