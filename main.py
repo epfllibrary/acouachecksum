@@ -8,6 +8,7 @@ import zipfile
 import py7zr
 import tarfile
 import rarfile
+import time
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
 
@@ -23,13 +24,18 @@ version = "0.9"
 
 error_file = "ACOUA_md5_errors.txt"
 
+# For archive formats that cannot be processed in memory: tat, tar.gz
+tmp_checksum_folder = "tmp_checksum_folder"
+
 # expected path of the ingestion folder...
 # we use the test value, which is a bit longer
-libsafe_ingestion_path = "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
-backslash = '\\'
+libsafe_ingestion_path = (
+    "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
+)
+backslash = "\\"
 
-compressed_extensions = ('.zip', '.7z', '.rar', '.tar', '.tar.gz')
-multipart_hint_extensions = ('.z01', '.z001', '.part1.rar')
+compressed_extensions = (".zip", ".7z", ".rar", ".tar", ".tar.gz")
+multipart_hint_extensions = (".z01", ".z001", ".part1.rar")
 
 
 def remove_archiver():
@@ -45,10 +51,11 @@ def add_archiver(arch_format):
 # A few generic functions to handle divergences between main classes:
 # from modules zipfile, py7zr, etc. .
 
+
 def open_archive(ls, extension, parent=None):
     # IN PROGRESS what should archivename be if ls is an archive within another archive?
     if parent is None:
-        print('ls is a', type(ls))
+        print("ls is a", type(ls))
         if isinstance(ls, pathlib.PosixPath) or isinstance(ls, pathlib.WindowsPath):
             archivename = os.path.join(str(ls.parents[0]), ls.name)
         elif isinstance(ls, str):
@@ -64,21 +71,23 @@ def open_archive(ls, extension, parent=None):
         elif isinstance(ls, rarfile.RarFile):
             archivename = archive_filename(ls)
         else:
-            archivename = '[dummy]'
+            archivename = "[dummy]"
 
         try:
-            if extension == '.zip':
+            if extension == ".zip":
                 return (archivename, zipfile.ZipFile(archivename, mode="r"))
-            if extension == '.7z':
+            if extension == ".7z":
                 return (archivename, py7zr.SevenZipFile(archivename, mode="r"))
-            if extension == '.rar':
+            if extension == ".rar":
                 return (archivename, rarfile.RarFile(archivename, mode="r"))
-            if extension == '.tar' or extension == '.tar.gz':
+            if extension == ".tar" or extension == ".tar.gz":
                 return (archivename, tarfile.open(archivename, mode="r"))
-        except (zipfile.BadZipFile,
-                py7zr.exceptions.Bad7zFile,
-                rarfile.Error,
-                tarfile.ReadError) as e:
+        except (
+            zipfile.BadZipFile,
+            py7zr.exceptions.Bad7zFile,
+            rarfile.Error,
+            tarfile.ReadError,
+        ) as e:
             trace = str(e)
             log_message(trace)
             log_message(f"{archivename} is not a valid {extension} file.")
@@ -87,7 +96,7 @@ def open_archive(ls, extension, parent=None):
         print(ls)
         if isinstance(ls, zipfile.ZipInfo):
             try:
-                subarch = zipfile.ZipFile(parent.open(ls, mode='r'), mode='r')
+                subarch = zipfile.ZipFile(parent.open(ls, mode="r"), mode="r")
                 archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
                 print(archivename, subarch)
                 return (archivename, subarch)
@@ -171,14 +180,14 @@ def archive_object_filename(arch_object):
 
 def log_message(message):
     f_err = open(error_file, "a")
-    f_err.write(message + '\n')
+    f_err.write(message + "\n")
     f_err.close()
 
 
 def is_cp850(s):
     # check whether filenames are encoded as cp850 **sigh** or utf-8
     try:
-        x = s.encode('cp850').decode('utf-8')
+        x = s.encode("cp850").decode("utf-8")
         return True
     except Exception as e:
         trace = str(e)
@@ -190,19 +199,18 @@ def md5Checksum(filePath, ziparchive=None):
     # blocksize = 8192
     # switch to 1MB blocks to improve performance
     blocksize = 2**20
+    # For tar and tar.gz that require a full extraction
     if ziparchive is None:
-        fh = open(filePath, 'rb')
+        fh = open(filePath, "rb")
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
         ziparchive.reset()
         fname, fh = list(ziparchive.read(filePath).items())[0]
     elif isinstance(ziparchive, tarfile.TarFile):
-        tmp_checksum_folder = 'tmp_checksum_folder'
         ziparchive.extract(filePath, path=tmp_checksum_folder)
-        fh = open(tmp_checksum_folder + os.sep + filePath, 'rb')
-        shutil.rmtree(tmp_checksum_folder)
+        fh = open(tmp_checksum_folder + os.sep + filePath, "rb")
     else:
-        fh = ziparchive.open(filePath, 'r')
+        fh = ziparchive.open(filePath, "r")
 
     m = hashlib.md5()
     while True:
@@ -222,8 +230,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     else:
         archiver_list = []
     if len(archiver_list) == 0:
-        archiver_list = ['.zip']
-    print('archiver list', archiver_list)
+        archiver_list = [".zip"]
+    print("archiver list", archiver_list)
 
     for label in tkroot.winfo_children():
         if type(label) is tk.Label:
@@ -235,7 +243,7 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     d_title = "Select your ingestion folder"
     choosedir = filedialog.askdirectory(initialdir=Path.home(), title=d_title)
-    if choosedir == '' or not os.path.exists(choosedir):
+    if choosedir == "" or not os.path.exists(choosedir):
         return
     os.chdir(choosedir)
 
@@ -251,28 +259,28 @@ def runchecksum(tkroot, width_chars, check_zips):
     # get folder name, useful to check for path length
     foldername = choosedir.split(os.sep)[-1]
 
-    choosedir_display = ''
+    choosedir_display = ""
     line_length = 0
     for fs_level in choosedir.split(os.sep):
         if len(fs_level) > width_chars:
-            fs_level = fs_level[0:width_chars-6] + '[...]'
+            fs_level = fs_level[0 : width_chars - 6] + "[...]"
 
         if line_length + len(fs_level) < width_chars:
             choosedir_display += fs_level + os.sep
             line_length += len(fs_level) + 1
         else:
-            choosedir_display += '\n'
+            choosedir_display += "\n"
             choosedir_display += fs_level + os.sep
             line_length = len(fs_level) + 1
 
-    path_info = tk.Label(tkroot, text=f'Processing:\n{choosedir_display}')
+    path_info = tk.Label(tkroot, text=f"Processing:\n{choosedir_display}")
     path_info.pack()
     tkroot.update()
 
     # Create logfile for potential warnings and errors
     log_message(error_file_header)
 
-    all_files = list(pathlib.Path(choosedir).rglob('**/*'))
+    all_files = list(pathlib.Path(choosedir).rglob("**/*"))
     for hint in multipart_hint_extensions:
         for file in all_files:
             if file.name.endswith(hint):
@@ -280,14 +288,20 @@ def runchecksum(tkroot, width_chars, check_zips):
                 log_message("=> this is not supported and will probably fail.")
 
     # TODO compressed formats are not processed simultaneously, this needs to be adapted
-    # 
+    #
     arch_files = []
     if do_zips:
-        for (idx, extension) in enumerate(archiver_list):
-            if idx == 0 or (extension not in archiver_list[0:idx-1]):
-                arch_files.append(list(pathlib.Path(choosedir).rglob(f'**/*{extension}')))
+        for idx, extension in enumerate(archiver_list):
+            if idx == 0 or (extension not in archiver_list[0 : idx - 1]):
+                arch_files.append(
+                    list(pathlib.Path(choosedir).rglob(f"**/*{extension}"))
+                )
 
-        nonzipfiles = [x for x in all_files if not any([x.name.endswith(ext) for ext in archiver_list])]
+        nonzipfiles = [
+            x
+            for x in all_files
+            if not any([x.name.endswith(ext) for ext in archiver_list])
+        ]
 
     else:
         nonzipfiles = all_files
@@ -295,14 +309,14 @@ def runchecksum(tkroot, width_chars, check_zips):
             arch_files.append((extension, []))
             arch_backlog[extension] = []
 
-    print('arch:', arch_files)
-    print('non arch', nonzipfiles)
+    print("arch:", arch_files)
+    print("non arch", nonzipfiles)
 
     files = []
     final_filelist = []
     # Create tk.Tk label for progress information: counting files
     progress_update_frequency = 10
-    progress_info = tk.Label(tkroot, text=f'Listing: {len(files)} files')
+    progress_info = tk.Label(tkroot, text=f"Listing: {len(files)} files")
     progress_info.pack()
     tkroot.update()
     for ls in nonzipfiles:
@@ -311,31 +325,34 @@ def runchecksum(tkroot, width_chars, check_zips):
         if len(os.path.join(str(ls.parents[0]), ls.name)) > MAX_PATH:
             log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
             log_message(f"-> {os.path.join(str(ls.parents[0]), ls.name)}")
-        filename = os.path.join(str(ls.parents[0]).replace(choosedir, '.'),
-                                ls.name)
-        if not filename.endswith(os.sep + '.DS_Store') \
-           and not filename.endswith(os.sep + 'Thumbs.db') \
-           and not filename.startswith(os.path.join(choosedir, 'ACOUA_md5.md5')) \
-           and not filename.startswith(os.path.join('.', 'ACOUA_md5.md5')) \
-           and not filename.startswith(os.path.join(choosedir, error_file)) \
-           and not filename.startswith(os.path.join('.', error_file)) \
-           and not os.path.isdir(filename):
+        filename = os.path.join(str(ls.parents[0]).replace(choosedir, "."), ls.name)
+        if (
+            not filename.endswith(os.sep + ".DS_Store")
+            and not filename.endswith(os.sep + "Thumbs.db")
+            and not filename.startswith(os.path.join(choosedir, "ACOUA_md5.md5"))
+            and not filename.startswith(os.path.join(".", "ACOUA_md5.md5"))
+            and not filename.startswith(os.path.join(choosedir, error_file))
+            and not filename.startswith(os.path.join(".", error_file))
+            and not os.path.isdir(filename)
+        ):
             # check for excessive expected path length locally
             # (where libsafe will fail)
             target_path = libsafe_ingestion_path + foldername + filename[1:]
             # print(target_path)
             if len(target_path) > MAX_PATH:
-                log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
+                log_message(
+                    f"WARNING > {MAX_PATH} chars for expected path + file name:"
+                )
                 log_message(f"-> {target_path}")
             # filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
-            if filename.startswith('/'):
+            if filename.startswith("/"):
                 files.append(filename[1:])
             else:
                 files.append(filename)
 
         if len(files) % progress_update_frequency == 0:
             # print(f'Listing: {len(files)} files')
-            progress_info.config(text=f'Listing: {len(files)} files')
+            progress_info.config(text=f"Listing: {len(files)} files")
             tkroot.update()
 
     final_filelist += [f.lower() for f in files]
@@ -358,100 +375,130 @@ def runchecksum(tkroot, width_chars, check_zips):
             for info in archive_content(archive):
                 print(archive_object_filename(info))
                 if idx <= len(archiver_list) - 2:
-                    if archive_object_filename(info).endswith(archiver_list[idx+1]):
+                    if archive_object_filename(info).endswith(archiver_list[idx + 1]):
                         print(f"Within {ls} : found {archive_object_filename(info)}")
-                        (subarchname, sub_arch) = open_archive(info, archiver_list[idx+1], parent=archive)
+                        (subarchname, sub_arch) = open_archive(
+                            info, archiver_list[idx + 1], parent=archive
+                        )
                         if sub_arch is not None:
                             for x in archive_content(sub_arch):
-                                print('sub_arch contains:', x)
+                                print("sub_arch contains:", x)
                 if not isdir(info):
-                    arch_content[extension][archivename].append(archive_object_filename(info))
+                    arch_content[extension][archivename].append(
+                        archive_object_filename(info)
+                    )
 
             for content_file in arch_content[extension][archivename]:
                 # check for excessive expected path length locally (where libsafe will fail)
-                target_path = libsafe_ingestion_path + foldername + '/' + content_file
+                target_path = libsafe_ingestion_path + foldername + "/" + content_file
                 final_filelist.append(target_path.lower())
                 if len(target_path) > MAX_PATH:
-                    log_message(f"WARNING > {MAX_PATH} chars for expected path + file name:")
+                    log_message(
+                        f"WARNING > {MAX_PATH} chars for expected path + file name:"
+                    )
                     log_message(f"-> {target_path}")
 
             n_archived_files += len(arch_content[extension][archivename])
-            progress_msg = f'Listing: {len(files) + n_archived_files} files'
+            progress_msg = f"Listing: {len(files) + n_archived_files} files"
             progress_info.config(text=progress_msg)
             tkroot.update()
     total_files = len(files) + n_archived_files
 
     # check for full path !+ filename collisions that will result in data loss and/or ingestion errors
-    name_collisions = [(item, count) for item, count in collections.Counter(final_filelist).items() if count > 1]
+    name_collisions = [
+        (item, count)
+        for item, count in collections.Counter(final_filelist).items()
+        if count > 1
+    ]
     for conflict in name_collisions:
-        log_message(f"Name conflict: {conflict[0]} will occur {conflict[1]} times in your dataset (probably from several compressed files).")
+        log_message(
+            f"Name conflict: {conflict[0]} will occur {conflict[1]} times in your dataset (probably from several compressed files)."
+        )
 
     # print('Done listing')
     # now display the actual checksum progress
     progress_update_frequency = 1
     progress = 0
-    progress_info .config(text=f'Checksum progress: {progress}/{total_files}')
+    progress_info.config(text=f"Checksum progress: {progress}/{total_files}")
     tkroot.update()
 
     f = open("ACOUA_md5.md5", "wb")
 
     for element in files:
         progress += 1
+        print("processing", element)
         try:
             md5 = md5Checksum(element)
             # In order to match what Libsafe sees on the filesystem:
             # - filenames must be encoded as UTF-8
             # - NFC normalization for representation of accented characters
-            f.write(normalize('NFC', f'{md5} {element.replace(choosedir, ".").replace("/", backslash)}\n').encode("UTF-8"))
+            f.write(
+                normalize(
+                    "NFC",
+                    f'{md5} {element.replace(choosedir, ".").replace("/", backslash)}\n',
+                ).encode("UTF-8")
+            )
         except Exception as e:
             trace = str(e)
             log_message(trace)
         if progress % progress_update_frequency == 0:
             # print(f'Progress: {progress}/{len(files)}')
-            progress_info.config(text=f'Progress: {progress}/{total_files}')
+            progress_info.config(text=f"Progress: {progress}/{total_files}")
             tkroot.update()
 
     for extension in archiver_list:
         for myarchfile in arch_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
             archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1])
-            archive_path = archive_path.replace(choosedir, '.')
+            archive_path = archive_path.replace(choosedir, ".")
             # print(archive_path)
             for archived_file in arch_content[extension][myarchfile]:
                 # Filenames of objects inside a zip are either:
                 # 1) cp850/cp437 (old style)
                 # 2) utf-8. Let's check
-                assumed_encoding = 'cp850' if is_cp850(archived_file) else 'utf-8'
+                assumed_encoding = "cp850" if is_cp850(archived_file) else "utf-8"
                 progress += 1
+                print("processing", myarchfile, "#", archived_file)
                 try:
                     md5 = md5Checksum(archived_file, ziparchive=archive)
                     # In order to match what Libsafe sees on the filesystem:
                     # - filenames must be encoded as UTF-8
                     # - NFC normalization is not needed: the Libsafe Archive Extractor will manage
-                    f.write(f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace("/", backslash).encode("UTF-8"))
+                    f.write(
+                        f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace(
+                            "/", backslash
+                        ).encode(
+                            "UTF-8"
+                        )
+                    )
                 except Exception as e:
                     trace = str(e)
                     log_message(trace)
                 if progress % progress_update_frequency == 0:
-                    progress_msg = f'Progress: {progress}/{total_files}'
+                    progress_msg = f"Progress: {progress}/{total_files}"
                     progress_info.config(text=progress_msg)
                     tkroot.update()
+            if os.path.exists(tmp_checksum_folder):
+                shutil.rmtree(tmp_checksum_folder, ignore_errors=True)
+                print(os.path.exists(tmp_checksum_folder))
 
     f.close()
-    progress_info.config(text=f'Progress: {progress}/{total_files}')
+    progress_info.config(text=f"Progress: {progress}/{total_files}")
     tkroot.update()
 
     f_err = open(error_file, "r")
     error_content = f_err.read()
     f_err.close()
 
-    if error_content.replace('\r', '').replace('\n', '') == error_file_header.replace('\r', '').replace('\n', ''):
+    if error_content.replace("\r", "").replace("\n", "") == error_file_header.replace(
+        "\r", ""
+    ).replace("\n", ""):
         os.remove(error_file)
     else:
         error_info = tk.Label(tkroot, text=error_message)
         error_info.pack()
 
-    done_info = tk.Label(tkroot, text='Done: ACOUA_md5.md5 has been created')
+    done_info = tk.Label(tkroot, text="Done: ACOUA_md5.md5 has been created")
     done_info.pack()
 
 
@@ -459,8 +506,8 @@ root = tk.Tk()
 current_font = font.nametofont("TkDefaultFont")
 root.wm_title("ACOUA CheckSum v" + version)
 width = 500
-width_chars = int(1.7*width / current_font.actual()['size'])
-root.geometry(f'{width}x550+1000+300')
+width_chars = int(1.7 * width / current_font.actual()["size"])
+root.geometry(f"{width}x550+1000+300")
 check_zips = tk.IntVar()
 check_zips.set(1)
 checkbutton_label = "Calculate checksum inside Zip and similar files?"
@@ -468,23 +515,21 @@ tk.Checkbutton(root, text=checkbutton_label, variable=check_zips).pack()
 zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
 zip_select_lbl.pack()
 frm = tk.Frame()
-listbox = tk.Listbox(frm,  selectmode=tk.MULTIPLE)
+listbox = tk.Listbox(frm, selectmode=tk.MULTIPLE)
 # 2023-11-01 We will only use one single format for now
 listbox.insert(1, ".zip")
-#listbox.insert(2, ".7z")
-#listbox.insert(3, ".rar")
-#listbox.insert(4, ".zip")
+# listbox.insert(2, ".7z")
+# listbox.insert(3, ".rar")
+# listbox.insert(4, ".zip")
 
-scrollbar = ttk.Scrollbar(frm, orient='vertical')
+scrollbar = ttk.Scrollbar(frm, orient="vertical")
 listbox.config(yscrollcommand=scrollbar.set)
 scrollbar.config(command=listbox.yview)
 
 btn_frm = tk.Frame()
 for arch_format in compressed_extensions:
     callback = partial(add_archiver, arch_format)
-    tk.Button(btn_frm,
-              text=f"Add {arch_format}",
-              command=callback).pack(side=tk.LEFT)
+    tk.Button(btn_frm, text=f"Add {arch_format}", command=callback).pack(side=tk.LEFT)
 btn_frm.pack()
 delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
 
@@ -493,7 +538,7 @@ listbox.pack()
 frm.pack()
 delete_btn.pack()
 
-button_label = 'Select a directory and run checksum'
+button_label = "Select a directory and run checksum"
 callback = partial(runchecksum, root, width_chars, check_zips)
 tk.Button(root, text=button_label, command=callback).pack()
 root.mainloop()
