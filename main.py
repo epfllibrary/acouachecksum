@@ -14,6 +14,9 @@ from ctypes.wintypes import MAX_PATH
 
 import collections
 
+import traceback
+from typing import Union, Optional
+
 import tkinter as tk
 from tkinter import font, filedialog, ttk
 
@@ -205,7 +208,11 @@ def md5Checksum(filePath, ziparchive=None):
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
         ziparchive.reset()
-        fname, fh = list(ziparchive.read(filePath).items())[0]
+        # fname, fh = list(ziparchive.readall().items())[0]
+        factory = py7zr.io.BytesIOFactory(blocksize)
+        ziparchive.extractall(factory=factory)
+        fh = factory.products[filePath]
+
     elif isinstance(ziparchive, tarfile.TarFile):
         ziparchive.extract(filePath, path=tmp_checksum_folder)
         fh = open(tmp_checksum_folder + os.sep + filePath, "rb")
@@ -474,6 +481,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 except Exception as e:
                     trace = str(e)
                     log_message(trace)
+                    log_message(traceback.print_stack())
                 if progress % progress_update_frequency == 0:
                     progress_msg = f"Progress: {progress}/{total_files}"
                     progress_info.config(text=progress_msg)
@@ -502,43 +510,46 @@ def runchecksum(tkroot, width_chars, check_zips):
     done_info.pack()
 
 
-root = tk.Tk()
-current_font = font.nametofont("TkDefaultFont")
-root.wm_title("ACOUA CheckSum v" + version)
-width = 500
-width_chars = int(1.7 * width / current_font.actual()["size"])
-root.geometry(f"{width}x550+1000+300")
-check_zips = tk.IntVar()
-check_zips.set(1)
-checkbutton_label = "Calculate checksum inside Zip and similar files?"
-tk.Checkbutton(root, text=checkbutton_label, variable=check_zips).pack()
-zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
-zip_select_lbl.pack()
-frm = tk.Frame()
-listbox = tk.Listbox(frm, selectmode=tk.MULTIPLE)
-# 2023-11-01 We will only use one single format for now
-listbox.insert(1, ".zip")
-# listbox.insert(2, ".7z")
-# listbox.insert(3, ".rar")
-# listbox.insert(4, ".zip")
+if __name__ == "__main__":
+    root = tk.Tk()
+    current_font = font.nametofont("TkDefaultFont")
+    root.wm_title("ACOUA CheckSum v" + version)
+    width = 500
+    width_chars = int(1.7 * width / current_font.actual()["size"])
+    root.geometry(f"{width}x550+1000+300")
+    check_zips = tk.IntVar()
+    check_zips.set(1)
+    checkbutton_label = "Calculate checksum inside Zip and similar files?"
+    tk.Checkbutton(root, text=checkbutton_label, variable=check_zips).pack()
+    zip_select_lbl = tk.Label(root, text="Zip-like format sequence:")
+    zip_select_lbl.pack()
+    frm = tk.Frame()
+    listbox = tk.Listbox(frm, selectmode=tk.MULTIPLE)
+    # 2023-11-01 We will only use one single format for now
+    listbox.insert(1, ".zip")
+    # listbox.insert(2, ".7z")
+    # listbox.insert(3, ".rar")
+    # listbox.insert(4, ".zip")
 
-scrollbar = ttk.Scrollbar(frm, orient="vertical")
-listbox.config(yscrollcommand=scrollbar.set)
-scrollbar.config(command=listbox.yview)
+    scrollbar = ttk.Scrollbar(frm, orient="vertical")
+    listbox.config(yscrollcommand=scrollbar.set)
+    scrollbar.config(command=listbox.yview)
 
-btn_frm = tk.Frame()
-for arch_format in compressed_extensions:
-    callback = partial(add_archiver, arch_format)
-    tk.Button(btn_frm, text=f"Add {arch_format}", command=callback).pack(side=tk.LEFT)
-btn_frm.pack()
-delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
+    btn_frm = tk.Frame()
+    for arch_format in compressed_extensions:
+        callback = partial(add_archiver, arch_format)
+        tk.Button(btn_frm, text=f"Add {arch_format}", command=callback).pack(
+            side=tk.LEFT
+        )
+    btn_frm.pack()
+    delete_btn = tk.Button(root, text="Delete selected", command=remove_archiver)
 
-scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
-listbox.pack()
-frm.pack()
-delete_btn.pack()
+    scrollbar.pack(side=tk.RIGHT, fill=tk.BOTH)
+    listbox.pack()
+    frm.pack()
+    delete_btn.pack()
 
-button_label = "Select a directory and run checksum"
-callback = partial(runchecksum, root, width_chars, check_zips)
-tk.Button(root, text=button_label, command=callback).pack()
-root.mainloop()
+    button_label = "Select a directory and run checksum"
+    callback = partial(runchecksum, root, width_chars, check_zips)
+    tk.Button(root, text=button_label, command=callback).pack()
+    root.mainloop()

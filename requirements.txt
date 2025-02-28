@@ -3,5 +3,5 @@ altgraph==0.17
 macholib
 pyinstaller
 pyinstaller-hooks-contrib==2022.10
-py7zr
+py7zr@git+https://github.com/miurahr/py7zr@v1.0.0rc2
 rarfile
