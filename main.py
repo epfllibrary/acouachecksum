@@ -1,6 +1,7 @@
 import hashlib
 import os
 import sys
+import re
 import glob
 import pathlib
 import shutil
@@ -49,6 +50,20 @@ def remove_archiver():
 
 def add_archiver(arch_format):
     listbox.insert("end", arch_format)
+
+
+class MemIOFactory(py7zr.io.WriterFactory):
+    def __init__(self, limit: int):
+        self.limit = limit
+        self.products: dict[str, py7zr.io.MemIO] = {}
+
+    def create(self, filename: str) -> py7zr.io.MemIO:
+        product = py7zr.io.MemIO(filename, self.limit)
+        self.products[filename] = product
+        return product
+
+    def get(self, filename):
+        return self.products[filename]
 
 
 # A few generic functions to handle divergences between main classes:
@@ -208,10 +223,11 @@ def md5Checksum(filePath, ziparchive=None):
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
         ziparchive.reset()
-        # fname, fh = list(ziparchive.readall().items())[0]
-        factory = py7zr.io.BytesIOFactory(blocksize)
+        # 4 TiB is a nice arbitrary limit
+        factory = py7zr.io.BytesIOFactory(2**42)
         ziparchive.extractall(factory=factory)
         fh = factory.products[filePath]
+        # ziparchive.reset()
 
     elif isinstance(ziparchive, tarfile.TarFile):
         ziparchive.extract(filePath, path=tmp_checksum_folder)
@@ -294,7 +310,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 log_message(f"{file.name} seems to be part of a multipart archive.")
                 log_message("=> this is not supported and will probably fail.")
 
-    # TODO compressed formats are not processed simultaneously, this needs to be adapted
+    # TODO compressed formats are not processed simultaneously, needsto adapt
     #
     arch_files = []
     if do_zips:
@@ -347,9 +363,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             target_path = libsafe_ingestion_path + foldername + filename[1:]
             # print(target_path)
             if len(target_path) > MAX_PATH:
-                log_message(
-                    f"WARNING > {MAX_PATH} chars for expected path + file name:"
-                )
+                log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
                 log_message(f"-> {target_path}")
             # filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
             if filename.startswith("/"):
@@ -400,9 +414,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 target_path = libsafe_ingestion_path + foldername + "/" + content_file
                 final_filelist.append(target_path.lower())
                 if len(target_path) > MAX_PATH:
-                    log_message(
-                        f"WARNING > {MAX_PATH} chars for expected path + file name:"
-                    )
+                    log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
                     log_message(f"-> {target_path}")
 
             n_archived_files += len(arch_content[extension][archivename])
@@ -411,7 +423,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             tkroot.update()
     total_files = len(files) + n_archived_files
 
-    # check for full path !+ filename collisions that will result in data loss and/or ingestion errors
+    # check for full path + filename collisions that will result in data loss and/or ingestion errors
     name_collisions = [
         (item, count)
         for item, count in collections.Counter(final_filelist).items()
@@ -498,9 +510,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     error_content = f_err.read()
     f_err.close()
 
-    if error_content.replace("\r", "").replace("\n", "") == error_file_header.replace(
-        "\r", ""
-    ).replace("\n", ""):
+    if re.sub("[\r\n]", "", error_content) == re.sub("[\r\n]", "", error_file_header):
         os.remove(error_file)
     else:
         error_info = tk.Label(tkroot, text=error_message)
