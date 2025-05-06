@@ -5,13 +5,20 @@ import re
 import glob
 import pathlib
 import shutil
+import copy
 import zipfile
 import py7zr
 import tarfile
 import rarfile
 import time
+import threading
 from pathlib import Path
 from ctypes.wintypes import MAX_PATH
+
+import traceback
+
+import cProfile
+import pstats
 
 import collections
 
@@ -50,20 +57,6 @@ def remove_archiver():
 
 def add_archiver(arch_format):
     listbox.insert("end", arch_format)
-
-
-class MemIOFactory(py7zr.io.WriterFactory):
-    def __init__(self, limit: int):
-        self.limit = limit
-        self.products: dict[str, py7zr.io.MemIO] = {}
-
-    def create(self, filename: str) -> py7zr.io.MemIO:
-        product = py7zr.io.MemIO(filename, self.limit)
-        self.products[filename] = product
-        return product
-
-    def get(self, filename):
-        return self.products[filename]
 
 
 # A few generic functions to handle divergences between main classes:
@@ -213,22 +206,107 @@ def is_cp850(s):
         return False
 
 
-def md5Checksum(filePath, ziparchive=None):
+# TODO take the file-like case selection out of md5Checksum (i.e. use md5Checksum2)
+# TODO write a wrapper that manages the ziparchive behavior
+
+
+def handleArchive(filelist, ziparchive, progress):
+    md5list = []
+    if ziparchive is None:
+        # filelist will be just a filename, i.e. a string
+        filePath = filelist
+        progress += 1
+        print("processing <no_archive_here> #", filePath)
+        element = open(filePath, "rb")
+        md5list.append((filePath, md5Checksum2(element)))
+    elif isinstance(ziparchive, py7zr.SevenZipFile):
+        # Use the BytesIO part of the response, the filename can be discarded
+        # ziparchive2 = py7zr.SevenZipFile(ziparchive.archiveinfo().filename, mode="r")
+        no_buffer_required = False
+        ziparchive.reset()
+        # 4 TiB is a nice arbitrary limit
+        factory = py7zr.io.BytesIOFactory(2**42)
+        ziparchive.extractall(factory=factory)
+        # ziparchive.extract(targets=[filePath], factory=factory)
+        print(factory.products)
+        for filePath in filelist:
+            progress += 1
+            print("processing", ziparchive.archiveinfo().filename, "#", filePath)
+            element = factory.products[filePath]
+            md5list.append((filePath, md5Checksum2(element)))
+        # ziparchive.reset()
+    elif isinstance(ziparchive, tarfile.TarFile):
+        for filePath in filelist:
+            ziparchive.extract(filePath, path=tmp_checksum_folder)
+            progress += 1
+            print("processing", ziparchive.name, "#", filePath)
+            element = open(tmp_checksum_folder + os.sep + filePath, "rb")
+            md5list.append((filePath, md5Checksum2(element)))
+        if os.path.exists(tmp_checksum_folder):
+            shutil.rmtree(tmp_checksum_folder, ignore_errors=True)
+            print(os.path.exists(tmp_checksum_folder))
+    else:
+        for filePath in filelist:
+            progress += 1
+            print("processing", ziparchive.filename, "#", filePath)
+            element = ziparchive.open(filePath, "r")
+            md5list.append((filePath, md5Checksum2(element)))
+    return (md5list, progress)
+
+
+def md5Checksum2(fh):
     # blocksize = 8192
     # switch to 1MB blocks to improve performance
     blocksize = 2**20
+
+    no_buffer_required = True
+    buffer_blocks = 256
+
+    m = hashlib.md5()
+    k = 0
+    while True:
+        if no_buffer_required:
+            data = fh.read(blocksize)
+            k += 1
+            if not data:
+                break
+            m.update(data)
+        else:
+            buffer = fh.read(blocksize * buffer_blocks)
+            for n in range(buffer_blocks):
+                print(n)
+                data = buffer[n * blocksize : min((n + 1) * blocksize - 1, len(buffer))]
+                m.update(data)
+                if not data:
+                    break
+            if not buffer:
+                break
+    return m.hexdigest()
+
+
+def md5Checksum_old(filePath, ziparchive=None):
+    # blocksize = 8192
+    # switch to 1MB blocks to improve performance
+    blocksize = 2**20
+
+    no_buffer_required = True
+    buffer_blocks = 256
+
     # For tar and tar.gz that require a full extraction
     if ziparchive is None:
         fh = open(filePath, "rb")
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
+        # ziparchive2 = py7zr.SevenZipFile(ziparchive.archiveinfo().filename, mode="r")
+        no_buffer_required = False
         ziparchive.reset()
         # 4 TiB is a nice arbitrary limit
         factory = py7zr.io.BytesIOFactory(2**42)
-        ziparchive.extractall(factory=factory)
+        # ziparchive.extractall(factory=factory)
+        ziparchive.extract(targets=[filePath], factory=factory)
+        print(factory.products)
         fh = factory.products[filePath]
         # ziparchive.reset()
-
     elif isinstance(ziparchive, tarfile.TarFile):
         ziparchive.extract(filePath, path=tmp_checksum_folder)
         fh = open(tmp_checksum_folder + os.sep + filePath, "rb")
@@ -236,12 +314,33 @@ def md5Checksum(filePath, ziparchive=None):
         fh = ziparchive.open(filePath, "r")
 
     m = hashlib.md5()
+    k = 0
     while True:
-        data = fh.read(blocksize)
-        if not data:
-            break
-        m.update(data)
+        if no_buffer_required:
+            data = fh.read(blocksize)
+            k += 1
+            if not data:
+                break
+            m.update(data)
+        else:
+            buffer = fh.read(blocksize * buffer_blocks)
+            for n in range(buffer_blocks):
+                print(n)
+                data = buffer[n * blocksize : min((n + 1) * blocksize - 1, len(buffer))]
+                m.update(data)
+                if not data:
+                    break
+            if not buffer:
+                break
+    print(f"{filePath}\t{k}")
     return m.hexdigest()
+
+
+def refresh_tk_component(tk_component):
+    # Not called as I'd like
+    tk_component.update()
+    print("timer ticked")
+    threading.Timer(5, refresh_tk_component, [tk_component]).start()
 
 
 def runchecksum(tkroot, width_chars, check_zips):
@@ -342,6 +441,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     progress_info = tk.Label(tkroot, text=f"Listing: {len(files)} files")
     progress_info.pack()
     tkroot.update()
+    # refresh_tk_component(tkroot)
     for ls in nonzipfiles:
         # check for excessive path length locally
         # (in case the user has a problem)
@@ -388,7 +488,7 @@ def runchecksum(tkroot, width_chars, check_zips):
         for ls in arch_files[idx]:
             print(extension, ls)
             # Libsafe Sanitizers are run before the Archive Extractor
-            # => .DS_Store and Thumbs.db will not be deleted if contained in an archive files
+            # => .DS_Store and Thumbs.db will not be deleted if contained in an archive file
             (archivename, archive) = open_archive(ls, extension)
             arch_content[extension][archivename] = []
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
@@ -447,7 +547,8 @@ def runchecksum(tkroot, width_chars, check_zips):
         progress += 1
         print("processing", element)
         try:
-            md5 = md5Checksum(element)
+            fh = open(element, "rb")
+            md5 = md5Checksum2(fh)
             # In order to match what Libsafe sees on the filesystem:
             # - filenames must be encoded as UTF-8
             # - NFC normalization for representation of accented characters
@@ -459,48 +560,57 @@ def runchecksum(tkroot, width_chars, check_zips):
             )
         except Exception as e:
             trace = str(e)
-            log_message(trace)
+            trace = traceback.print_exc()
+            log_message(str(trace))
         if progress % progress_update_frequency == 0:
             # print(f'Progress: {progress}/{len(files)}')
             progress_info.config(text=f"Progress: {progress}/{total_files}")
             tkroot.update()
 
+    # TODO: change logic somewhere to:
+    # 1. open the archive
+    # 2. read each file from the archive
+    # 3. for each read file calculate the checksum
     for extension in archiver_list:
         for myarchfile in arch_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
             archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1])
+            print("archive_path = ", archive_path)
             archive_path = archive_path.replace(choosedir, ".")
-            # print(archive_path)
-            for archived_file in arch_content[extension][myarchfile]:
+            try:
+                md5list, progress = handleArchive(
+                    arch_content[extension][myarchfile], archive, progress
+                )
+            except Exception as e:
+                trace = str(e)
+                log_message(trace)
+                log_message(traceback.print_stack())
+
+            for archived_file, md5 in md5list:
                 # Filenames of objects inside a zip are either:
                 # 1) cp850/cp437 (old style)
                 # 2) utf-8. Let's check
                 assumed_encoding = "cp850" if is_cp850(archived_file) else "utf-8"
-                progress += 1
-                print("processing", myarchfile, "#", archived_file)
-                try:
-                    md5 = md5Checksum(archived_file, ziparchive=archive)
-                    # In order to match what Libsafe sees on the filesystem:
-                    # - filenames must be encoded as UTF-8
-                    # - NFC normalization is not needed: the Libsafe Archive Extractor will manage
-                    f.write(
-                        f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace(
-                            "/", backslash
-                        ).encode(
-                            "UTF-8"
-                        )
+
+                # TODO move progress monitoring into handleArchive()
+                # progress += 1
+                # print("processing", myarchfile, "#", archived_file)
+
+                # In order to match what Libsafe sees on the filesystem:
+                # - filenames must be encoded as UTF-8
+                # - NFC normalization is not needed: the Libsafe Archive Extractor will manage
+                f.write(
+                    f'{md5} {archive_path + os.path.sep + archived_file.encode(assumed_encoding).decode("utf-8")}\n'.replace(
+                        "/", backslash
+                    ).encode(
+                        "UTF-8"
                     )
-                except Exception as e:
-                    trace = str(e)
-                    log_message(trace)
-                    log_message(traceback.print_stack())
+                )
+
                 if progress % progress_update_frequency == 0:
                     progress_msg = f"Progress: {progress}/{total_files}"
                     progress_info.config(text=progress_msg)
                     tkroot.update()
-            if os.path.exists(tmp_checksum_folder):
-                shutil.rmtree(tmp_checksum_folder, ignore_errors=True)
-                print(os.path.exists(tmp_checksum_folder))
 
     f.close()
     progress_info.config(text=f"Progress: {progress}/{total_files}")
@@ -563,3 +673,9 @@ if __name__ == "__main__":
     callback = partial(runchecksum, root, width_chars, check_zips)
     tk.Button(root, text=button_label, command=callback).pack()
     root.mainloop()
+    # cProfile.run("root.mainloop()")
+
+    # pr = cProfile.Profile()  # create a cProfiler object
+    # pr.runcall(root.mainloop)  # profile my function
+    # p = pstats.Stats(pr)  # create pstats obj based on profiler above.
+    # p.print_callers("decompress")
