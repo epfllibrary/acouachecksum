@@ -209,14 +209,25 @@ def is_cp850(s):
 # TODO take the file-like case selection out of md5Checksum (i.e. use md5Checksum2)
 # TODO write a wrapper that manages the ziparchive behavior
 
-def tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot):
+
+def tk_progress_update(
+    total_files, progress, progress_update_frequency, progress_info, tkroot
+):
     if progress % progress_update_frequency == 0:
         progress_msg = f"Progress: {progress}/{total_files}"
         progress_info.config(text=progress_msg)
         tkroot.update()
 
 
-def handleArchive(filelist, ziparchive, total_files, progress, progress_update_frequency, progress_info, tkroot):
+def handleArchive(
+    filelist,
+    ziparchive,
+    total_files,
+    progress,
+    progress_update_frequency,
+    progress_info,
+    tkroot,
+):
     md5list = []
     if ziparchive is None:
         # filelist will be just a filename, i.e. a string
@@ -225,7 +236,9 @@ def handleArchive(filelist, ziparchive, total_files, progress, progress_update_f
         print("processing <no_archive_here> #", filePath)
         element = open(filePath, "rb")
         md5list.append((filePath, md5Checksum2(element)))
-        tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot)
+        tk_progress_update(
+            total_files, progress, progress_update_frequency, progress_info, tkroot
+        )
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
         # ziparchive2 = py7zr.SevenZipFile(ziparchive.archiveinfo().filename, mode="r")
@@ -241,26 +254,48 @@ def handleArchive(filelist, ziparchive, total_files, progress, progress_update_f
             print("processing", ziparchive.archiveinfo().filename, "#", filePath)
             element = factory.products[filePath]
             md5list.append((filePath, md5Checksum2(element)))
-            tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot)
+            tk_progress_update(
+                total_files, progress, progress_update_frequency, progress_info, tkroot
+            )
         # ziparchive.reset()
     elif isinstance(ziparchive, tarfile.TarFile):
+        for member in ziparchive:
+            print(member.name)
+            if member.name in filelist:
+                print(" is in filelist")
+                progress += 1
+                element = ziparchive.extractfile(member.name)
+                md5list.append((member.name, md5Checksum2(element)))
+                tk_progress_update(
+                    total_files,
+                    progress,
+                    progress_update_frequency,
+                    progress_info,
+                    tkroot,
+                )
+        """
+        ziparchive.extract(filePath, path=tmp_checksum_folder)
         for filePath in filelist:
-            ziparchive.extract(filePath, path=tmp_checksum_folder)
             progress += 1
             print("processing", ziparchive.name, "#", filePath)
-            element = open(tmp_checksum_folder + os.sep + filePath, "rb")
+            # element = open(tmp_checksum_folder + os.sep + filePath, "rb")
             md5list.append((filePath, md5Checksum2(element)))
-            tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot)
+            tk_progress_update(
+                total_files, progress, progress_update_frequency, progress_info, tkroot
+            )
         if os.path.exists(tmp_checksum_folder):
             shutil.rmtree(tmp_checksum_folder, ignore_errors=True)
             print(os.path.exists(tmp_checksum_folder))
+        """
     else:
         for filePath in filelist:
             progress += 1
             print("processing", ziparchive.filename, "#", filePath)
             element = ziparchive.open(filePath, "r")
             md5list.append((filePath, md5Checksum2(element)))
-            tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot)
+            tk_progress_update(
+                total_files, progress, progress_update_frequency, progress_info, tkroot
+            )
     return (md5list, progress)
 
 
@@ -572,7 +607,9 @@ def runchecksum(tkroot, width_chars, check_zips):
             trace = str(e)
             trace = traceback.print_exc()
             log_message(str(trace))
-        tk_progress_update(total_files, progress, progress_update_frequency, progress_info, tkroot)
+        tk_progress_update(
+            total_files, progress, progress_update_frequency, progress_info, tkroot
+        )
         """
         if progress % progress_update_frequency == 0:
             # print(f'Progress: {progress}/{len(files)}')
@@ -592,8 +629,13 @@ def runchecksum(tkroot, width_chars, check_zips):
             archive_path = archive_path.replace(choosedir, ".")
             try:
                 md5list, progress = handleArchive(
-                    arch_content[extension][myarchfile], archive, total_files,
-                    progress, progress_update_frequency, progress_info, tkroot
+                    arch_content[extension][myarchfile],
+                    archive,
+                    total_files,
+                    progress,
+                    progress_update_frequency,
+                    progress_info,
+                    tkroot,
                 )
             except Exception as e:
                 trace = str(e)
