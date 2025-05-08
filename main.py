@@ -72,15 +72,15 @@ def open_archive(ls, extension, parent=None):
         elif isinstance(ls, str):
             archivename = ls
         elif isinstance(ls, zipfile.ZipFile):
-            archivename = archive_filename(ls)
+            archivename = arch_filename(ls)
         elif isinstance(ls, zipfile.ZipExtFile):
-            archivename = archive_filename(ls)
+            archivename = arch_filename(ls)
         elif isinstance(ls, py7zr.SevenZipFile):
-            archivename = archive_filename(ls)
+            archivename = arch_filename(ls)
         elif isinstance(ls, tarfile.TarFile):
-            archivename = archive_filename(ls)
+            archivename = arch_filename(ls)
         elif isinstance(ls, rarfile.RarFile):
-            archivename = archive_filename(ls)
+            archivename = arch_filename(ls)
         else:
             archivename = "[dummy]"
 
@@ -108,13 +108,13 @@ def open_archive(ls, extension, parent=None):
         if isinstance(ls, zipfile.ZipInfo):
             try:
                 subarch = zipfile.ZipFile(parent.open(ls, mode="r"), mode="r")
-                archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
+                archivename = f"{arch_filename(parent)}##{arch_filename(ls)}]"
                 print(archivename, subarch)
                 return (archivename, subarch)
             except zipfile.BadZipFile:
                 return (None, None)
         elif isinstance(ls, zipfile.ZipExtFile):
-            archivename = f"{archive_filename(parent)}##{archive_filename(ls)}]"
+            archivename = f"{arch_filename(parent)}##{arch_filename(ls)}]"
             return (archivename, ls)
         elif isinstance(ls, py7zr.SevenZipInfo):
             try:
@@ -133,7 +133,7 @@ def open_archive(ls, extension, parent=None):
                 return (None, None)
 
 
-def archive_content(archive):
+def arch_content(archive):
     if archive is None:
         return []
     if isinstance(archive, zipfile.ZipFile):
@@ -146,7 +146,7 @@ def archive_content(archive):
         return archive.infolist()
 
 
-def archive_filename(archive):
+def arch_filename(archive):
     if isinstance(archive, zipfile.ZipFile):
         return archive.filename
     if isinstance(archive, zipfile.ZipExtFile):
@@ -178,7 +178,7 @@ def isdir(arch_object):
         return arch_object.isdir()
 
 
-def archive_object_filename(arch_object):
+def arch_object_filename(arch_object):
     if isinstance(arch_object, zipfile.ZipInfo):
         return arch_object.filename
     if isinstance(arch_object, py7zr.FileInfo):
@@ -204,10 +204,6 @@ def is_cp850(s):
         trace = str(e)
         log_message(trace)
         return False
-
-
-# TODO take the file-like case selection out of md5Checksum (i.e. use md5Checksum2)
-# TODO write a wrapper that manages the ziparchive behavior
 
 
 def tk_progress_update(
@@ -523,9 +519,9 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     final_filelist += [f.lower() for f in files]
 
-    arch_content = {}
+    archive_content = {}
     for extension in archiver_list:
-        arch_content[extension] = {}
+        archive_content[extension] = {}
 
     n_archived_files = 0
     # TODO adapt to process arch_content, then switch to subsequent formats in arch_backlog
@@ -535,34 +531,35 @@ def runchecksum(tkroot, width_chars, check_zips):
             # Libsafe Sanitizers are run before the Archive Extractor
             # => .DS_Store and Thumbs.db will not be deleted if contained in an archive file
             (archivename, archive) = open_archive(ls, extension)
-            arch_content[extension][archivename] = []
+            archive_content[extension][archivename] = []
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
             # TODO: there could other sub archives further down the sequence as well...
-            for info in archive_content(archive):
-                print(archive_object_filename(info))
+            for info in arch_content(archive):
+                print(arch_object_filename(info))
                 if idx <= len(archiver_list) - 2:
-                    if archive_object_filename(info).endswith(archiver_list[idx + 1]):
-                        print(f"Within {ls} : found {archive_object_filename(info)}")
+                    if arch_object_filename(info).endswith(archiver_list[idx + 1]):
+                        print(f"Within {ls} : found {arch_object_filename(info)}")
                         (subarchname, sub_arch) = open_archive(
                             info, archiver_list[idx + 1], parent=archive
                         )
                         if sub_arch is not None:
-                            for x in archive_content(sub_arch):
+                            for x in arch_content(sub_arch):
                                 print("sub_arch contains:", x)
                 if not isdir(info):
-                    arch_content[extension][archivename].append(
-                        archive_object_filename(info)
+                    archive_content[extension][archivename].append(
+                        arch_object_filename(info)
                     )
 
-            for content_file in arch_content[extension][archivename]:
-                # check for excessive expected path length locally (where libsafe will fail)
+            for content_file in archive_content[extension][archivename]:
+                # check for likely excessive expected path length locally
+                # (where libsafe will fail)
                 target_path = libsafe_ingestion_path + foldername + "/" + content_file
                 final_filelist.append(target_path.lower())
                 if len(target_path) > MAX_PATH:
                     log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
                     log_message(f"-> {target_path}")
 
-            n_archived_files += len(arch_content[extension][archivename])
+            n_archived_files += len(archive_content[extension][archivename])
             progress_msg = f"Listing: {len(files) + n_archived_files} files"
             progress_info.config(text=progress_msg)
             tkroot.update()
@@ -622,14 +619,14 @@ def runchecksum(tkroot, width_chars, check_zips):
     # 2. read each file from the archive
     # 3. for each read file calculate the checksum
     for extension in archiver_list:
-        for myarchfile in arch_content[extension]:
+        for myarchfile in archive_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
             archive_path = os.path.sep.join(myarchfile.split(os.sep)[0:-1])
             print("archive_path = ", archive_path)
             archive_path = archive_path.replace(choosedir, ".")
             try:
                 md5list, progress = handleArchive(
-                    arch_content[extension][myarchfile],
+                    archive_content[extension][myarchfile],
                     archive,
                     total_files,
                     progress,
