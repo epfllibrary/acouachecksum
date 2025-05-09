@@ -502,6 +502,8 @@ def runchecksum(tkroot, width_chars, check_zips):
             # check for excessive expected path length locally
             # (where libsafe will fail)
             target_path = libsafe_ingestion_path + foldername + filename[1:]
+            print("target_path", target_path.lower())
+            final_filelist.append(target_path.lower())
             # print(target_path)
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
@@ -517,7 +519,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             progress_info.config(text=f"Listing: {len(files)} files")
             tkroot.update()
 
-    final_filelist += [f.lower() for f in files]
+    # final_filelist += [f.lower() for f in files]
 
     archive_content = {}
     for extension in archiver_list:
@@ -554,6 +556,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 # check for likely excessive expected path length locally
                 # (where libsafe will fail)
                 target_path = libsafe_ingestion_path + foldername + "/" + content_file
+                print("target_path", target_path.lower())
                 final_filelist.append(target_path.lower())
                 if len(target_path) > MAX_PATH:
                     log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
@@ -566,6 +569,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     total_files = len(files) + n_archived_files
 
     # check for full path + filename collisions that will result in data loss and/or ingestion errors
+    print(final_filelist)
     name_collisions = [
         (item, count)
         for item, count in collections.Counter(final_filelist).items()
