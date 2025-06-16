@@ -191,7 +191,7 @@ def arch_object_filename(arch_object):
 
 def log_message(message):
     f_err = open(error_file, "a")
-    f_err.write(message + "\n")
+    f_err.write(f"{message}\n")
     f_err.close()
 
 
@@ -639,9 +639,10 @@ def runchecksum(tkroot, width_chars, check_zips):
                     tkroot,
                 )
             except Exception as e:
-                trace = str(e)
-                log_message(trace)
-                log_message(traceback.print_stack())
+                # trace = str(e)
+                # log_message(trace)
+                log_message(traceback.format_exc())
+                md5list = []
 
             for archived_file, md5 in md5list:
                 # Filenames of objects inside a zip are either:
