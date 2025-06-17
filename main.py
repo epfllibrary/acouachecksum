@@ -31,9 +31,11 @@ from tkinter import font, filedialog, ttk
 from functools import partial
 from unicodedata import normalize
 
-version = "0.9"
+version = "0.9.1"
 
 error_file = "ACOUA_md5_errors.txt"
+
+out_file = "ACOUA_md5.md5"
 
 # For archive formats that cannot be processed in memory: tat, tar.gz
 tmp_checksum_folder = "tmp_checksum_folder"
@@ -67,7 +69,9 @@ def open_archive(ls, extension, parent=None):
     # IN PROGRESS what should archivename be if ls is an archive within another archive?
     if parent is None:
         print("ls is a", type(ls))
-        if isinstance(ls, pathlib.PosixPath) or isinstance(ls, pathlib.WindowsPath):
+        if isinstance(ls, pathlib.PosixPath):
+            archivename = os.path.join(str(ls.parents[0]), ls.name)
+        elif isinstance(ls, pathlib.WindowsPath):
             archivename = os.path.join(str(ls.parents[0]), ls.name)
         elif isinstance(ls, str):
             archivename = ls
@@ -237,16 +241,16 @@ def handleArchive(
         )
     elif isinstance(ziparchive, py7zr.SevenZipFile):
         # Use the BytesIO part of the response, the filename can be discarded
-        # ziparchive2 = py7zr.SevenZipFile(ziparchive.archiveinfo().filename, mode="r")
         no_buffer_required = False
         ziparchive.reset()
         # 4 TiB is a nice arbitrary limit
         factory = py7zr.io.BytesIOFactory(2**42)
         ziparchive.extractall(factory=factory)
-        # ziparchive.extract(targets=[filePath], factory=factory)
         print(factory.products)
         for filePath in filelist:
             progress += 1
+            print(filePath)
+            print(ziparchive.header.__dict__)
             print("processing", ziparchive.archiveinfo().filename, "#", filePath)
             element = factory.products[filePath]
             md5list.append((filePath, md5Checksum2(element)))
@@ -269,20 +273,6 @@ def handleArchive(
                     progress_info,
                     tkroot,
                 )
-        """
-        ziparchive.extract(filePath, path=tmp_checksum_folder)
-        for filePath in filelist:
-            progress += 1
-            print("processing", ziparchive.name, "#", filePath)
-            # element = open(tmp_checksum_folder + os.sep + filePath, "rb")
-            md5list.append((filePath, md5Checksum2(element)))
-            tk_progress_update(
-                total_files, progress, progress_update_frequency, progress_info, tkroot
-            )
-        if os.path.exists(tmp_checksum_folder):
-            shutil.rmtree(tmp_checksum_folder, ignore_errors=True)
-            print(os.path.exists(tmp_checksum_folder))
-        """
     else:
         for filePath in filelist:
             progress += 1
@@ -322,58 +312,6 @@ def md5Checksum2(fh):
                     break
             if not buffer:
                 break
-    return m.hexdigest()
-
-
-def md5Checksum_old(filePath, ziparchive=None):
-    # blocksize = 8192
-    # switch to 1MB blocks to improve performance
-    blocksize = 2**20
-
-    no_buffer_required = True
-    buffer_blocks = 256
-
-    # For tar and tar.gz that require a full extraction
-    if ziparchive is None:
-        fh = open(filePath, "rb")
-    elif isinstance(ziparchive, py7zr.SevenZipFile):
-        # Use the BytesIO part of the response, the filename can be discarded
-        # ziparchive2 = py7zr.SevenZipFile(ziparchive.archiveinfo().filename, mode="r")
-        no_buffer_required = False
-        ziparchive.reset()
-        # 4 TiB is a nice arbitrary limit
-        factory = py7zr.io.BytesIOFactory(2**42)
-        # ziparchive.extractall(factory=factory)
-        ziparchive.extract(targets=[filePath], factory=factory)
-        print(factory.products)
-        fh = factory.products[filePath]
-        # ziparchive.reset()
-    elif isinstance(ziparchive, tarfile.TarFile):
-        ziparchive.extract(filePath, path=tmp_checksum_folder)
-        fh = open(tmp_checksum_folder + os.sep + filePath, "rb")
-    else:
-        fh = ziparchive.open(filePath, "r")
-
-    m = hashlib.md5()
-    k = 0
-    while True:
-        if no_buffer_required:
-            data = fh.read(blocksize)
-            k += 1
-            if not data:
-                break
-            m.update(data)
-        else:
-            buffer = fh.read(blocksize * buffer_blocks)
-            for n in range(buffer_blocks):
-                print(n)
-                data = buffer[n * blocksize : min((n + 1) * blocksize - 1, len(buffer))]
-                m.update(data)
-                if not data:
-                    break
-            if not buffer:
-                break
-    print(f"{filePath}\t{k}")
     return m.hexdigest()
 
 
@@ -447,7 +385,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     for hint in multipart_hint_extensions:
         for file in all_files:
             if file.name.endswith(hint):
-                log_message(f"{file.name} seems to be part of a multipart archive.")
+                log_message(f" Is {file.name} part of a multipart archive?")
                 log_message("=> this is not supported and will probably fail.")
 
     # TODO compressed formats are not processed simultaneously, needsto adapt
@@ -493,8 +431,8 @@ def runchecksum(tkroot, width_chars, check_zips):
         if (
             not filename.endswith(os.sep + ".DS_Store")
             and not filename.endswith(os.sep + "Thumbs.db")
-            and not filename.startswith(os.path.join(choosedir, "ACOUA_md5.md5"))
-            and not filename.startswith(os.path.join(".", "ACOUA_md5.md5"))
+            and not filename.startswith(os.path.join(choosedir, out_file))
+            and not filename.startswith(os.path.join(".", out_file))
             and not filename.startswith(os.path.join(choosedir, error_file))
             and not filename.startswith(os.path.join(".", error_file))
             and not os.path.isdir(filename)
@@ -535,7 +473,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             (archivename, archive) = open_archive(ls, extension)
             archive_content[extension][archivename] = []
             # TODO: implement behvior for content that would be extension[idx+1] in the sequence
-            # TODO: there could other sub archives further down the sequence as well...
+            # TODO: support other sub archives further down the sequence
             for info in arch_content(archive):
                 print(arch_object_filename(info))
                 if idx <= len(archiver_list) - 2:
@@ -569,7 +507,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     total_files = len(files) + n_archived_files
 
     # check for full path + filename collisions that will result in data loss and/or ingestion errors
-    print(final_filelist)
+    # print(final_filelist)
     name_collisions = [
         (item, count)
         for item, count in collections.Counter(final_filelist).items()
@@ -587,7 +525,7 @@ def runchecksum(tkroot, width_chars, check_zips):
     progress_info.config(text=f"Checksum progress: {progress}/{total_files}")
     tkroot.update()
 
-    f = open("ACOUA_md5.md5", "wb")
+    f = open(out_file, "wb")
 
     for element in files:
         progress += 1
@@ -618,10 +556,6 @@ def runchecksum(tkroot, width_chars, check_zips):
             tkroot.update()
         """
 
-    # TODO: change logic somewhere to:
-    # 1. open the archive
-    # 2. read each file from the archive
-    # 3. for each read file calculate the checksum
     for extension in archiver_list:
         for myarchfile in archive_content[extension]:
             (archivename, archive) = open_archive(myarchfile, extension)
@@ -649,10 +583,6 @@ def runchecksum(tkroot, width_chars, check_zips):
                 # 1) cp850/cp437 (old style)
                 # 2) utf-8. Let's check
                 assumed_encoding = "cp850" if is_cp850(archived_file) else "utf-8"
-
-                # TODO move progress monitoring into handleArchive()
-                # progress += 1
-                # print("processing", myarchfile, "#", archived_file)
 
                 # In order to match what Libsafe sees on the filesystem:
                 # - filenames must be encoded as UTF-8
