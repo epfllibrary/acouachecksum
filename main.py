@@ -37,8 +37,8 @@ error_file = "ACOUA_md5_errors.txt"
 
 out_file = "ACOUA_md5.md5"
 
-# For archive formats that cannot be processed in memory: tat, tar.gz
-tmp_checksum_folder = "tmp_checksum_folder"
+# For archive formats that cannot be processed in memory: no longer used
+# tmp_checksum_folder = "tmp_checksum_folder"
 
 # expected path of the ingestion folder...
 # we use the test value, which is a bit longer
