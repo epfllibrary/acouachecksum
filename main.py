@@ -42,9 +42,7 @@ out_file = "ACOUA_md5.md5"
 
 # expected path of the ingestion folder...
 # we use the test value, which is a bit longer
-libsafe_ingestion_path = (
-    "//nas-app-ma-cifs1.epfl.ch/si_datarepo_inj_test_app/LIBSAFE/ING/ING*******/"
-)
+libsafe_ingestion_path = "C:/LSLink/ING/ING*******/"
 backslash = "\\"
 
 compressed_extensions = (".zip", ".7z", ".rar", ".tar", ".tar.gz")
