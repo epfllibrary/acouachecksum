@@ -33,6 +33,7 @@ from unittest.mock import MagicMock, patch
 import py7zr
 import rarfile
 
+
 # ---------------------------------------------------------------------------
 # Headless import of main.py
 # Tkinter is imported at module level in main.py; we stub it out before import
