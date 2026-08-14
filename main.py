@@ -22,7 +22,6 @@ import pstats
 
 import collections
 
-import traceback
 from typing import Union, Optional
 
 import tkinter as tk
@@ -31,7 +30,7 @@ from tkinter import font, filedialog, ttk
 from functools import partial
 from unicodedata import normalize
 
-version = "0.9.1"
+version = "0.9.2"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -192,9 +191,8 @@ def arch_object_filename(arch_object):
 
 
 def log_message(message):
-    f_err = open(error_file, "a")
-    f_err.write(f"{message}\n")
-    f_err.close()
+    with open(error_file, "a") as f_err:
+        f_err.write(f"{message}\n")
 
 
 def is_cp850(s):
@@ -304,7 +302,7 @@ def md5Checksum2(fh):
             buffer = fh.read(blocksize * buffer_blocks)
             for n in range(buffer_blocks):
                 print(n)
-                data = buffer[n * blocksize : min((n + 1) * blocksize - 1, len(buffer))]
+                data = buffer[n * blocksize : min((n + 1) * blocksize, len(buffer))]
                 m.update(data)
                 if not data:
                     break
@@ -404,6 +402,7 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     else:
         nonzipfiles = all_files
+        arch_backlog = {}
         for extension in compressed_extensions:
             arch_files.append((extension, []))
             arch_backlog[extension] = []
@@ -542,7 +541,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             )
         except Exception as e:
             trace = str(e)
-            trace = traceback.print_exc()
+            trace = traceback.format_exc()
             log_message(str(trace))
         tk_progress_update(
             total_files, progress, progress_update_frequency, progress_info, tkroot
@@ -603,9 +602,8 @@ def runchecksum(tkroot, width_chars, check_zips):
     progress_info.config(text=f"Progress: {progress}/{total_files}")
     tkroot.update()
 
-    f_err = open(error_file, "r")
-    error_content = f_err.read()
-    f_err.close()
+    with open(error_file, "r") as f_err:
+        error_content = f_err.read()
 
     if re.sub("[\r\n]", "", error_content) == re.sub("[\r\n]", "", error_file_header):
         os.remove(error_file)
