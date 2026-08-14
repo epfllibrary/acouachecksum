@@ -101,6 +101,7 @@ def open_archive(ls, extension, parent=None):
             tarfile.ReadError,
         ) as e:
             trace = str(e)
+            trace = traceback.format_exc()
             log_message(trace)
             log_message(f"{archivename} is not a valid {extension} file.")
             return (archivename, None)
@@ -201,7 +202,7 @@ def is_cp850(s):
         x = s.encode("cp850").decode("utf-8")
         return True
     except Exception as e:
-        trace = str(e)
+        trace = str(f'{s} : {e}')
         log_message(trace)
         return False
 
@@ -540,7 +541,6 @@ def runchecksum(tkroot, width_chars, check_zips):
                 ).encode("UTF-8")
             )
         except Exception as e:
-            trace = str(e)
             trace = traceback.format_exc()
             log_message(str(trace))
         tk_progress_update(
@@ -570,9 +570,8 @@ def runchecksum(tkroot, width_chars, check_zips):
                     tkroot,
                 )
             except Exception as e:
-                # trace = str(e)
-                # log_message(trace)
-                log_message(traceback.format_exc())
+                trace = traceback.format_exc()
+                log_message(str(trace))
                 md5list = []
 
             for archived_file, md5 in md5list:
