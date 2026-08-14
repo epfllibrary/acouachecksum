@@ -117,7 +117,7 @@ def open_archive(ls, extension, parent=None):
         elif isinstance(ls, zipfile.ZipExtFile):
             archivename = f"{arch_filename(parent)}##{arch_filename(ls)}]"
             return (archivename, ls)
-        elif isinstance(ls, py7zr.SevenZipInfo):
+        elif isinstance(ls, py7zr.SevenZipFile):
             try:
                 pass
             except py7zr.exceptions.Bad7zFile:
@@ -155,7 +155,7 @@ def arch_filename(archive):
     if isinstance(archive, py7zr.SevenZipFile):
         return archive.filename
     if isinstance(archive, tarfile.TarFile):
-        return archive.filename
+        return archive.name
     if isinstance(archive, rarfile.RarFile):
         return archive.filename
     if isinstance(archive, zipfile.ZipInfo):
@@ -163,7 +163,7 @@ def arch_filename(archive):
     if isinstance(archive, py7zr.ArchiveInfo):
         return archive.filename
     if isinstance(archive, tarfile.TarInfo):
-        return archive.filename
+        return archive.name
     if isinstance(archive, rarfile.RarInfo):
         return archive.filename
 
