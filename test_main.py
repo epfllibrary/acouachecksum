@@ -123,6 +123,14 @@ def tar_archive(tmp_path):
 
 
 @pytest.fixture()
+def rar_archive(tmp_path):
+    """A rar archive containing one file with known content."""
+    content = {"a.txt": b"This is a test file.\n"}
+    path = "test_assets/simpletest.rar"
+    return path, content
+
+
+@pytest.fixture()
 def sevenz_archive(tmp_path):
     """A .7z archive containing one file with known content."""
     content = {"a.txt": b"content of file a"}
@@ -228,6 +236,11 @@ class TestArchFilename:
         path = make_tar({"c.txt": b"c"}, tmp_path / "test.tar")
         with tarfile.open(path) as tf:
             assert main.arch_filename(tf) == str(path)
+
+    def test_rarfile(self, tmp_path):
+        path = "test_assets/simpletest.rar"
+        with rarfile.RarFile(path) as rf:
+            assert main.arch_filename(rf) == str(path)
 
     def test_tarinfo(self):
         ti = tarfile.TarInfo(name="dir/d.txt")
@@ -493,6 +506,29 @@ class TestHandleArchiveTar:
         names = [name for name, _ in md5list]
         assert "wanted.txt" in names
         assert "unwanted.txt" not in names
+
+# ---------------------------------------------------------------------------
+# handleArchive — rar
+# ---------------------------------------------------------------------------
+
+class TestHandleArchiveRar:
+
+    def test_checksums_all_files(self, rar_archive, null_tk, error_log):
+        path, content = rar_archive
+        print(path, content)
+        pi, tk = null_tk
+        with rarfile.RarFile(path) as rf:
+            md5list, _ = main.handleArchive(
+                list(content), rf,
+                total_files=len(content), progress=0,
+                progress_update_frequency=1,
+                progress_info=pi, tkroot=tk,
+            )
+        result = dict(md5list)
+        print([result])
+        for name, data in content.items():
+            print([name, data,  md5(data)])
+            assert result[name] == md5(data)
 
 
 # ---------------------------------------------------------------------------
