@@ -30,7 +30,7 @@ from tkinter import font, filedialog, ttk
 from functools import partial
 from unicodedata import normalize
 
-version = "0.9.2"
+version = "0.9.3"
 
 error_file = "ACOUA_md5_errors.txt"
 
@@ -325,10 +325,10 @@ def runchecksum(tkroot, width_chars, check_zips):
 
     if do_zips:
         archiver_list = listbox.get(0, tk.END)
+        if len(archiver_list) == 0:
+            archiver_list = [".zip"]
     else:
         archiver_list = []
-    if len(archiver_list) == 0:
-        archiver_list = [".zip"]
     print("archiver list", archiver_list)
 
     for label in tkroot.winfo_children():
@@ -385,8 +385,7 @@ def runchecksum(tkroot, width_chars, check_zips):
                 log_message(f" Is {file.name} part of a multipart archive?")
                 log_message("=> this is not supported and will probably fail.")
 
-    # TODO compressed formats are not processed simultaneously, needsto adapt
-    #
+    # TODO compressed formats are not processed simultaneously, need to adapt
     arch_files = []
     if do_zips:
         for idx, extension in enumerate(archiver_list):
@@ -444,7 +443,7 @@ def runchecksum(tkroot, width_chars, check_zips):
             if len(target_path) > MAX_PATH:
                 log_message(f"WARNING > {MAX_PATH} chars for path + file name:")
                 log_message(f"-> {target_path}")
-            # filename = os.path.join([str(ls.parents[0]).replace(choosedir,'.'), ls.name])
+
             if filename.startswith("/"):
                 files.append(filename[1:])
             else:
@@ -504,7 +503,8 @@ def runchecksum(tkroot, width_chars, check_zips):
             tkroot.update()
     total_files = len(files) + n_archived_files
 
-    # check for full path + filename collisions that will result in data loss and/or ingestion errors
+    # check for full path + filename collisions
+    # => reduce risk of data loss and/or ingestion errors
     # print(final_filelist)
     name_collisions = [
         (item, count)
