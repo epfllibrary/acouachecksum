@@ -2,6 +2,6 @@ wheel
 altgraph==0.17
 macholib
 pyinstaller
-pyinstaller-hooks-contrib==2022.10
-py7zr >= 1.0, <= 1.1
+pyinstaller-hooks-contrib==2026.8
+py7zr >= 1.0, < 1.2
 rarfile
