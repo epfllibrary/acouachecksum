@@ -202,8 +202,12 @@ def is_cp850(s):
         x = s.encode("cp850").decode("utf-8")
         return True
     except Exception as e:
-        trace = str(f'{s} : {e}')
-        log_message(trace)
+        try:
+            x = s.encode("utf-8").decode("utf-8")
+        except Exception as e:
+            # Not UTF-8 either? this should never happen, log it
+            trace = str(f'Exception while checking name encoding: {s} : {e}')
+            log_message(trace)
         return False
 
 
