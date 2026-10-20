@@ -30,7 +30,7 @@ from tkinter import font, filedialog, ttk
 from functools import partial
 from unicodedata import normalize
 
-version = "0.9.3"
+version = "0.9.3.1"
 
 error_file = "ACOUA_md5_errors.txt"
 
